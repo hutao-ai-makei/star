@@ -1,0 +1,17 @@
+{
+  "name": "star-launcher",
+  "version": "1.0.0",
+  "description": "第三方游戏启动器 - 极简玻璃拟态风格",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^22.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {}
+}

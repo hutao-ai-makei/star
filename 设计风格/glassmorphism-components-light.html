@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glassmorphism 玻璃拟态 · 浅色版</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --text: #2D2B55;
+      --text-light: rgba(45,43,85,0.55);
+      --accent: #667eea;
+      --glass: rgba(255, 255, 255, 0.55);
+      --glass-hover: rgba(255, 255, 255, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.65);
+      --glass-shadow: rgba(45, 43, 85, 0.08);
+    }
+
+    html, body {
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+      /* 浅色渐变背景 */
+      background: linear-gradient(135deg, #E8E0F0 0%, #D4E4F7 30%, #C8E6F5 60%, #E0D8F0 100%);
+    }
+
+    .card-frame {
+      /* 浅色渐变作为卡片内背景 */
+      background: linear-gradient(135deg, #DDD5EC 0%, #C5D8F0 35%, #BDD9F2 65%, #D5CDE8 100%);
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(45,43,85,0.1);
+      display: flex;
+      flex-direction: column;
+      aspect-ratio: 3 / 4;
+      height: 100vh;
+      max-width: 100vw;
+      position: relative;
+    }
+
+    /* 装饰性背景色块，给毛玻璃提供透过可见的内容 */
+    .card-frame::before {
+      content: '';
+      position: absolute;
+      top: 10%;
+      right: -15%;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(102,126,234,0.25) 0%, transparent 70%);
+      border-radius: 50%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .card-frame::after {
+      content: '';
+      position: absolute;
+      bottom: 15%;
+      left: -10%;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(118,75,162,0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .card-header { padding: 24px 32px 8px; text-align: center; flex-shrink: 0; position: relative; z-index: 1; }
+    .card-header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .card-header p { font-size: 12px; color: var(--text-light); font-weight: 500; }
+    .card-divider {
+      width: 40px;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      margin: 12px auto 0;
+      border-radius: 2px;
+    }
+    .card-desc { font-size: 12px; color: var(--text-light); text-align: center; line-height: 1.6; padding: 12px 28px 0; margin: 0; }
+
+    .showcase {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 32px 16px;
+      padding-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .showcase::-webkit-scrollbar { width: 4px; }
+    .showcase::-webkit-scrollbar-track { background: transparent; }
+    .showcase::-webkit-scrollbar-thumb { background: rgba(102,126,234,0.2); border-radius: 2px; }
+
+    /* Component Row: 浅色毛玻璃面板 */
+    .component-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 4px 16px var(--glass-shadow);
+      border-radius: 16px;
+      transition: all 0.25s ease;
+    }
+
+    .component-row:hover {
+      background: var(--glass-hover);
+      box-shadow: 0 6px 20px rgba(45,43,85,0.12);
+    }
+
+    .component-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-light); min-width: 70px; flex-shrink: 0; }
+    .component-content { flex: 1; min-width: 0; display: flex; align-items: center; }
+
+    /* === Buttons === */
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .neu-btn {
+      padding: 8px 18px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 2px 8px var(--glass-shadow);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .neu-btn:hover { background: var(--glass-hover); box-shadow: 0 4px 12px rgba(45,43,85,0.12); }
+    .neu-btn:active { background: rgba(255,255,255,0.85); }
+    .neu-btn-primary {
+      background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.15));
+      border-color: rgba(102,126,234,0.3);
+      box-shadow: 0 2px 8px rgba(102,126,234,0.15);
+      color: #5A6AE0;
+    }
+    .neu-btn-primary:hover {
+      background: linear-gradient(135deg, rgba(102,126,234,0.3), rgba(118,75,162,0.22));
+      box-shadow: 0 4px 14px rgba(102,126,234,0.2);
+    }
+    .neu-btn-pill { border-radius: 999px; }
+    .neu-btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+
+    /* === Input === */
+    .neu-input-wrapper { position: relative; width: 100%; }
+    .neu-input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 2px 8px var(--glass-shadow);
+      outline: none;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    .neu-input::placeholder { color: rgba(45,43,85,0.35); }
+    .neu-input:focus {
+      border-color: rgba(102,126,234,0.4);
+      background: var(--glass-hover);
+      box-shadow: 0 4px 12px rgba(102,126,234,0.12);
+    }
+    .neu-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 13px; pointer-events: none; }
+
+    /* === Toggle === */
+    .neu-toggle { display: flex; align-items: center; gap: 12px; }
+    .neu-toggle-switch {
+      width: 44px; height: 24px; border-radius: 12px;
+      background: rgba(255,255,255,0.5);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
+      position: relative; transition: all 0.3s ease; cursor: pointer;
+    }
+    .neu-toggle-switch::after {
+      content: ''; position: absolute;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff;
+      top: 2px; left: 2px; transition: all 0.3s ease;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .neu-toggle-switch.on {
+      background: linear-gradient(135deg, rgba(102,126,234,0.3), rgba(118,75,162,0.2));
+      border-color: rgba(102,126,234,0.35);
+      box-shadow: 0 2px 8px rgba(102,126,234,0.15);
+    }
+    .neu-toggle-switch.on::after {
+      left: 22px;
+      box-shadow: 0 2px 6px rgba(102,126,234,0.3);
+    }
+    .neu-toggle-label { font-size: 12px; font-weight: 600; color: var(--text); }
+
+    /* === Player === */
+    .neu-player { display: flex; align-items: center; gap: 10px; width: 100%; }
+    .neu-player-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 2px 6px var(--glass-shadow);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: var(--text); cursor: pointer; flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+    .neu-player-btn:hover { background: var(--glass-hover); }
+    .neu-player-btn.play {
+      width: 40px; height: 40px; font-size: 14px;
+      background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.15));
+      border-color: rgba(102,126,234,0.3);
+      color: #667eea;
+    }
+    .neu-player-btn.play:hover {
+      box-shadow: 0 4px 14px rgba(102,126,234,0.2);
+    }
+    .neu-player-track {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.5);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+      position: relative;
+    }
+    .neu-player-fill {
+      position: absolute; left: 0; top: 0; height: 100%; width: 55%; border-radius: 2px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      box-shadow: 0 1px 4px rgba(102,126,234,0.3);
+    }
+    .neu-player-time { font-size: 10px; font-weight: 600; color: var(--text-light); white-space: nowrap; flex-shrink: 0; }
+
+    /* === Progress === */
+    .neu-progress { display: flex; align-items: center; gap: 14px; }
+    .neu-progress-ring { position: relative; width: 50px; height: 50px; flex-shrink: 0; }
+    .neu-progress-ring svg { transform: rotate(-90deg); }
+    .neu-progress-ring circle { fill: none; stroke-width: 5; }
+    .neu-progress-ring .ring-bg { stroke: rgba(255,255,255,0.5); }
+    .neu-progress-ring .ring-fill {
+      stroke: url(#ringGradLight);
+      stroke-dasharray: 125.66; stroke-dashoffset: 31.42; stroke-linecap: round;
+    }
+    .neu-progress-text {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: var(--text);
+    }
+    .neu-progress-info { display: flex; flex-direction: column; gap: 2px; }
+    .neu-progress-info-title { font-size: 12px; font-weight: 700; color: var(--text); }
+    .neu-progress-info-sub { font-size: 10px; color: var(--text-light); }
+
+    /* === Tabs === */
+    .neu-tabs {
+      display: flex; gap: 4px; padding: 4px;
+      background: rgba(255,255,255,0.4);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
+      border-radius: 14px;
+    }
+    .neu-tab {
+      padding: 6px 16px; border-radius: 12px; font-size: 14px;
+      background: transparent; border: none; cursor: pointer;
+      color: var(--text-light); transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .neu-tab.active {
+      background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 2px 8px var(--glass-shadow);
+      color: var(--text); font-weight: 700;
+    }
+    .neu-tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.3); }
+
+    /* === Palette === */
+    .neu-palette { display: flex; align-items: center; gap: 12px; }
+    .neu-palette-colors { display: flex; gap: 8px; }
+    .neu-swatch {
+      width: 24px; height: 24px; border-radius: 14px; flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+    }
+    .neu-swatch:hover { transform: translateY(-2px); }
+    .neu-palette-name { font-size: 12px; font-weight: 700; color: var(--text); }
+    .neu-palette-hex { font-size: 9px; color: var(--text-light); font-family: 'SF Mono', monospace; }
+
+    /* === Card === */
+    .neu-card {
+      background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 4px 14px var(--glass-shadow);
+      padding: 14px 16px; display: flex; align-items: center; gap: 12px; width: 100%;
+      border-radius: 16px;
+      transition: all 0.25s ease;
+    }
+    .neu-card:hover {
+      background: var(--glass-hover);
+      box-shadow: 0 6px 20px rgba(45,43,85,0.12);
+    }
+    .neu-card-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.15));
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.6);
+      box-shadow: 0 2px 8px rgba(102,126,234,0.12);
+      display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+    }
+    .neu-card-content { flex: 1; min-width: 0; }
+    .neu-card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .neu-card-sub { font-size: 10px; color: var(--text-light); }
+    .neu-card-action {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 2px 6px var(--glass-shadow);
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+      color: var(--accent); cursor: pointer; flex-shrink: 0; transition: all 0.2s ease;
+    }
+    .neu-card-action:hover {
+      background: rgba(102,126,234,0.12);
+      box-shadow: 0 4px 12px rgba(102,126,234,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="card-frame">
+    <div class="card-header">
+      <h1>Glassmorphism</h1>
+      <p>玻璃拟态设计 · 浅色版</p>
+      <div class="card-divider"></div>
+      <p class="card-desc">浅色玻璃拟态——柔和的薰衣草渐变背景搭配白色半透明毛玻璃，保留通透层次感。</p>
+    </div>
+
+    <div class="showcase">
+      <!-- Buttons -->
+      <div class="component-row">
+        <div class="component-label">Buttons</div>
+        <div class="component-content">
+          <div class="btn-group">
+            <button class="neu-btn">Default</button>
+            <button class="neu-btn neu-btn-primary">Primary</button>
+            <button class="neu-btn neu-btn-pill">Pill</button>
+            <button class="neu-btn neu-btn-icon">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="component-row">
+        <div class="component-label">Input</div>
+        <div class="component-content">
+          <div class="neu-input-wrapper">
+            <span class="neu-input-icon">&#128269;</span>
+            <input type="text" class="neu-input" placeholder="Search anything...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Toggle -->
+      <div class="component-row">
+        <div class="component-label">Toggle</div>
+        <div class="component-content">
+          <div class="neu-toggle">
+            <div class="neu-toggle-switch on" onclick="this.classList.toggle('on')"></div>
+            <span class="neu-toggle-label">Enabled</span>
+            <div class="neu-toggle-switch" onclick="this.classList.toggle('on')"></div>
+            <span class="neu-toggle-label">Disabled</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player -->
+      <div class="component-row">
+        <div class="component-label">Player</div>
+        <div class="component-content">
+          <div class="neu-player">
+            <button class="neu-player-btn">&#9198;</button>
+            <button class="neu-player-btn play">&#9654;</button>
+            <button class="neu-player-btn">&#9197;</button>
+            <div class="neu-player-track"><div class="neu-player-fill"></div></div>
+            <span class="neu-player-time">1:45</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="component-row">
+        <div class="component-label">Progress</div>
+        <div class="component-content">
+          <div class="neu-progress">
+            <div class="neu-progress-ring">
+              <svg width="50" height="50" viewBox="0 0 50 50">
+                <circle class="ring-bg" cx="25" cy="25" r="20"/>
+                <circle class="ring-fill" cx="25" cy="25" r="20"/>
+              </svg>
+              <span class="neu-progress-text">75%</span>
+            </div>
+            <div class="neu-progress-info">
+              <span class="neu-progress-info-title">Loading</span>
+              <span class="neu-progress-info-sub">3 of 4 done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="component-row">
+        <div class="component-label">Tabs</div>
+        <div class="component-content">
+          <div class="neu-tabs">
+            <button class="neu-tab" onclick="activateTab(this)">&#9728;</button>
+            <button class="neu-tab active" onclick="activateTab(this)">&#9729;</button>
+            <button class="neu-tab" onclick="activateTab(this)">&#9790;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Palette -->
+      <div class="component-row">
+        <div class="component-label">Palette</div>
+        <div class="component-content">
+          <div class="neu-palette">
+            <div class="neu-palette-colors">
+              <div class="neu-swatch" style="background:#667eea"></div>
+              <div class="neu-swatch" style="background:#764ba2"></div>
+              <div class="neu-swatch" style="background:#f093fb"></div>
+              <div class="neu-swatch" style="background:#4facfe"></div>
+              <div class="neu-swatch" style="background:#43e97b"></div>
+            </div>
+            <div>
+              <div class="neu-palette-name">Glassmorphism</div>
+              <div class="neu-palette-hex">5 colors</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card -->
+      <div class="component-row">
+        <div class="component-label">Card</div>
+        <div class="component-content">
+          <div class="neu-card">
+            <div class="neu-card-avatar">&#9835;</div>
+            <div class="neu-card-content">
+              <div class="neu-card-title">Glass UI Design</div>
+              <div class="neu-card-sub">Frosted glass aesthetics</div>
+            </div>
+            <button class="neu-card-action">&#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG Gradient Defs -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="ringGradLight" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#667eea"/>
+        <stop offset="100%" stop-color="#764ba2"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <script>
+    function activateTab(el) {
+      el.parentElement.querySelectorAll('.neu-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+    }
+  </script>
+</body>
+</html>

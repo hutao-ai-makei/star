@@ -1,0 +1,108 @@
+/* === Glassmorphism Components === */
+
+/* Bottom gradient overlay for readability */
+#cover-area::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Game name overlay (top-left) */
+#game-info {
+  position: absolute;
+  top: 44px;
+  left: 24px;
+  z-index: 2;
+}
+
+#game-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+#game-last-played {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+/* Launch button (bottom-center, glass) */
+#launch-btn {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 14px 56px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  transition: background 0.2s, transform 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+#launch-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateX(-50%) scale(1.02);
+}
+
+#launch-btn.running {
+  background: rgba(244, 67, 54, 0.25);
+  border-color: rgba(244, 67, 54, 0.4);
+}
+
+/* Empty state */
+#empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* Polish: game-name glow */
+#game-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Icon transition */
+.game-icon {
+  transition: transform 0.15s ease, opacity 0.15s ease, outline 0.15s ease;
+}
+
+/* Launch button transitions */
+#launch-btn {
+  transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+}
+
+/* Sidebar scroll */
+#game-list {
+  scroll-behavior: smooth;
+}

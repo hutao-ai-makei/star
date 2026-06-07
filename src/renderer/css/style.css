@@ -1,0 +1,160 @@
+/* === CSS Variables === */
+:root {
+  --accent: #667eea;
+  --accent-glow: rgba(102, 126, 234, 0.55);
+  --accent-bg: rgba(102, 126, 234, 0.2);
+  --text: #2D2B55;
+  --text-light: rgba(45, 43, 85, 0.55);
+  --glass: rgba(255, 255, 255, 0.35);
+  --glass-hover: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --sidebar-width: 56px;
+  --font-family: 'Inter', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* === Reset === */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--font-family);
+  color: var(--text);
+  background: linear-gradient(135deg, #E8E0F0 0%, #D4E4F7 30%, #C8E6F5 60%, #E0D8F0 100%);
+  user-select: none;
+}
+
+/* === Layout === */
+#app {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+/* === Sidebar === */
+#sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  -webkit-app-region: no-drag;
+}
+
+#game-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  overflow-y: auto;
+  width: 100%;
+}
+
+#game-list::-webkit-scrollbar { width: 0; }
+
+.game-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+  opacity: 0.55;
+}
+
+.game-icon:hover { opacity: 0.8; transform: scale(1.05); }
+
+.game-icon.selected {
+  opacity: 1;
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
+  background-color: var(--accent-bg);
+}
+
+/* === Sidebar Divider === */
+#sidebar-divider {
+  width: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin: 4px 0;
+}
+
+/* === Add Button === */
+#add-game-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+#add-game-btn:hover { background: rgba(255, 255, 255, 0.4); }
+
+/* === Main Content === */
+#main-content {
+  flex: 1;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* === Title Bar === */
+#title-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 8px;
+  z-index: 10;
+  -webkit-app-region: drag;
+}
+
+.title-btn {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  margin-left: 8px;
+  -webkit-app-region: no-drag;
+  transition: opacity 0.15s;
+}
+
+.title-btn:hover { opacity: 0.8; }
+
+#btn-minimize { background: #4CAF50; }
+#btn-maximize { background: #FFC107; }
+#btn-close { background: #F44336; }
+
+/* === Cover Area === */
+#cover-area {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+}

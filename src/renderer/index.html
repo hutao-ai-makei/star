@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' file: data:;">
+  <title>Star Launcher</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/glass.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 左侧图标栏 -->
+    <aside id="sidebar">
+      <div id="game-list"></div>
+      <div id="sidebar-divider"></div>
+      <button id="add-game-btn" title="添加游戏">+</button>
+    </aside>
+
+    <!-- 右侧封面区 -->
+    <main id="main-content">
+      <!-- 标题栏 -->
+      <div id="title-bar">
+        <button class="title-btn" id="btn-minimize" title="最小化"></button>
+        <button class="title-btn" id="btn-maximize" title="最大化"></button>
+        <button class="title-btn" id="btn-close" title="关闭"></button>
+      </div>
+
+      <!-- 封面背景 -->
+      <div id="cover-area">
+        <div id="game-info">
+          <div id="game-name"></div>
+          <div id="game-last-played"></div>
+        </div>
+        <button id="launch-btn">▶ 启动游戏</button>
+        <div id="empty-state">
+          <div style="font-size:48px;margin-bottom:12px;">🎮</div>
+          <div>还没有游戏</div>
+          <div style="font-size:13px;margin-top:6px;opacity:0.6;">点击左侧 + 添加</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/util.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/detail.js"></script>
+  <script src="js/add-game.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
