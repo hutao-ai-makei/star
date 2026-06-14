@@ -16,6 +16,7 @@ function createWindow() {
     y: settings.windowY ?? undefined,
     minWidth: 640,
     minHeight: 420,
+    icon: path.join(__dirname, '..', '..', 'resources', 'icon.png'),
     frame: false,
     backgroundColor: '#E8E0F0',
     webPreferences: {

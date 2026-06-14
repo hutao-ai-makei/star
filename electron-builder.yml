@@ -15,4 +15,4 @@ win:
     - target: zip
       arch:
         - x64
-  icon: resources/icon.ico
+  icon: resources/icon.png
