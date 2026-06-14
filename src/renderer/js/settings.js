@@ -79,18 +79,42 @@ function renderSettingsGames() {
       <div class="settings-game-meta">${formatPlayTime(game.totalPlayTime) || '尚未游玩'} · ${formatLastPlayed(game.lastPlayedAt)}</div>
     `;
 
+    // 排序按钮
+    const orderBtns = document.createElement('div');
+    orderBtns.className = 'settings-order-btns';
+    const idx = settingsGames.indexOf(game);
+    orderBtns.innerHTML = `
+      <button class="settings-order-btn order-up${idx === 0 ? ' disabled' : ''}" data-game-id="${game.id}" data-dir="up" title="上移">▲</button>
+      <button class="settings-order-btn order-down${idx === settingsGames.length - 1 ? ' disabled' : ''}" data-game-id="${game.id}" data-dir="down" title="下移">▼</button>
+    `;
+
     // 操作按钮
     const actions = document.createElement('div');
     actions.className = 'settings-game-actions';
     actions.innerHTML = `<span class="settings-expand-hint">编辑 ▸</span>`;
 
+    item.appendChild(orderBtns);
     item.appendChild(cover);
     item.appendChild(info);
     item.appendChild(actions);
 
+    // 排序按钮事件
+    orderBtns.querySelectorAll('.settings-order-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (btn.classList.contains('disabled')) return;
+        const gid = btn.dataset.gameId;
+        const dir = btn.dataset.dir;
+        await window.electronAPI.reorderGame(gid, dir);
+        // 重新加载并刷新
+        settingsGames = await window.electronAPI.getGames();
+        renderSettingsGames();
+      });
+    });
+
     // 点击展开/折叠
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.settings-delete-btn') || e.target.closest('.settings-browse-btn') || e.target.closest('.settings-scan-btn')) return;
+      if (e.target.closest('.settings-delete-btn') || e.target.closest('.settings-browse-btn') || e.target.closest('.settings-scan-btn') || e.target.closest('.settings-order-btn')) return;
       if (expandedGameId === game.id) {
         expandedGameId = null;
       } else {

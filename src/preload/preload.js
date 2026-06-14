@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addGame: (exePath) => ipcRenderer.invoke('add-game', exePath),
   updateGame: (id, updates) => ipcRenderer.invoke('update-game', id, updates),
   removeGame: (id) => ipcRenderer.invoke('remove-game', id),
+  reorderGame: (id, direction) => ipcRenderer.invoke('reorder-game', id, direction),
 
   // 游戏启动
   launchGame: (id) => ipcRenderer.invoke('launch-game', id),

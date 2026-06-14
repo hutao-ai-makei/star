@@ -50,7 +50,14 @@ function writeData(data) {
 
 function getAllGames() {
   const data = readData();
-  return data.games || [];
+  const games = data.games || [];
+  // Sort by sortOrder, then by addedAt for games without sortOrder
+  return games.sort((a, b) => {
+    const ao = a.sortOrder ?? Infinity;
+    const bo = b.sortOrder ?? Infinity;
+    if (ao !== bo) return ao - bo;
+    return (a.addedAt || '').localeCompare(b.addedAt || '');
+  });
 }
 
 function getGameById(id) {
@@ -73,6 +80,7 @@ function addGame({ name, exePath, coverPath }) {
     addedAt: new Date().toISOString(),
     lastPlayedAt: null,
     totalPlayTime: 0,
+    sortOrder: data.games.length,
     notes: '',
     rating: 0,
     // === Update system fields ===
@@ -112,6 +120,26 @@ function removeGame(id) {
   writeData(data);
 }
 
+function reorderGame(id, direction) {
+  const data = readData();
+  const games = data.games;
+  // Assign default sortOrder
+  games.forEach((g, i) => { if (g.sortOrder == null) g.sortOrder = i; });
+  games.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const idx = games.findIndex(g => g.id === id);
+  if (idx === -1) return;
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (targetIdx < 0 || targetIdx >= games.length) return;
+
+  // Swap sortOrder
+  const tmp = games[idx].sortOrder;
+  games[idx].sortOrder = games[targetIdx].sortOrder;
+  games[targetIdx].sortOrder = tmp;
+
+  writeData(data);
+}
+
 // === Settings ===
 
 function getSettings() {
@@ -126,4 +154,4 @@ function updateSettings(updates) {
   return data.settings;
 }
 
-module.exports = { getAllGames, getGameById, addGame, updateGame, removeGame, getSettings, updateSettings };
+module.exports = { getAllGames, getGameById, addGame, updateGame, removeGame, reorderGame, getSettings, updateSettings };

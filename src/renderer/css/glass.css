@@ -272,6 +272,41 @@
   transition: opacity 0.15s;
 }
 
+/* Order buttons */
+.settings-order-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 8px;
+}
+
+.settings-order-btn {
+  width: 22px;
+  height: 18px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.1);
+  color: var(--text-light);
+  font-size: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.settings-order-btn:hover:not(.disabled) {
+  background: rgba(255,255,255,0.3);
+  color: var(--text);
+}
+
+.settings-order-btn.disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
 .settings-game-item:hover .settings-expand-hint {
   opacity: 1;
 }
