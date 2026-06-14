@@ -49,46 +49,6 @@ async function openAddGameDialog() {
   if (iconPath) games[games.length - 1].iconPath = iconPath;
   selectedGameId = game.id;
   renderAll();
-
-  // 4. 可选：选择游戏图标
-  const coverPath = await window.electronAPI.selectCoverFile();
-  if (coverPath) {
-    await window.electronAPI.updateGame(game.id, { coverPath });
-  }
-  // 刷新
-  games = await window.electronAPI.getGames();
-  if (coverPath) games.find(g => g.id === game.id).coverPath = coverPath;
-  selectedGameId = game.id;
-  renderAll();
-
-  // 5. 可选：选择游戏背景
-  const bgPath = await window.electronAPI.selectBackgroundFile();
-  if (bgPath) {
-    await window.electronAPI.updateGame(game.id, { backgroundPath: bgPath });
-  }
-  games = await window.electronAPI.getGames();
-  if (bgPath) games.find(g => g.id === game.id).backgroundPath = bgPath;
-  selectedGameId = game.id;
-  renderAll();
-
-  // 6. 可选：选择背景视频
-  const videoPath = await window.electronAPI.selectVideoFile();
-  if (videoPath) {
-    await window.electronAPI.updateGame(game.id, { videoPath });
-  }
-  games = await window.electronAPI.getGames();
-  if (videoPath) games.find(g => g.id === game.id).videoPath = videoPath;
-  selectedGameId = game.id;
-  renderAll();
-
-  // 7. 可选：选择媒体目录（放图片和视频，可用箭头切换）
-  const mediaDir = await window.electronAPI.selectMediaDir();
-  if (mediaDir) {
-    await window.electronAPI.updateGame(game.id, { mediaDir });
-    games = await window.electronAPI.getGames();
-    selectedGameId = game.id;
-    renderAll();
-  }
 }
 
 /**
