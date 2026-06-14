@@ -39,5 +39,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onGameRunning: (callback) => {
     ipcRenderer.on('game-running', (_event, data) => callback(data));
+  },
+
+  // === Update system ===
+  checkUpdate: (gameId) => ipcRenderer.invoke('check-update', gameId),
+  startDownload: (gameId, mode) => ipcRenderer.invoke('start-download', gameId, mode),
+  pauseDownload: (gameId) => ipcRenderer.invoke('pause-download', gameId),
+  cancelDownload: (gameId) => ipcRenderer.invoke('cancel-download', gameId),
+  startInstall: (gameId) => ipcRenderer.invoke('start-install', gameId),
+  rollbackGame: (gameId) => ipcRenderer.invoke('rollback-game', gameId),
+
+  // === Update events ===
+  onUpdateStatusChange: (callback) => {
+    ipcRenderer.on('update-status-change', (_event, data) => callback(data));
+  },
+  onDownloadProgress: (callback) => {
+    ipcRenderer.on('download-progress', (_event, data) => callback(data));
+  },
+  onUpdateError: (callback) => {
+    ipcRenderer.on('update-error', (_event, data) => callback(data));
+  },
+  onPreDownloadReady: (callback) => {
+    ipcRenderer.on('predownload-ready', (_event, data) => callback(data));
   }
 });
