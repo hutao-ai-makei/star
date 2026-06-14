@@ -2,6 +2,7 @@ const { spawn, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { getGameById, updateGame } = require('./store');
+const { checkForUpdate } = require('./update-checker');
 
 const runningProcesses = new Map(); // gameId -> { exeName, startTime, pid }
 
@@ -30,7 +31,7 @@ function findProcess(exeName) {
 }
 
 function launch(id, mainWindow) {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const game = getGameById(id);
     if (!game) {
       resolve({ success: false, error: '游戏不存在' });
@@ -40,6 +41,37 @@ function launch(id, mainWindow) {
     if (runningProcesses.has(id)) {
       resolve({ success: false, error: '游戏已在运行中' });
       return;
+    }
+
+    // Check for updates before launching
+    if (game.packageId && (game.apiBase || require('./store').getSettings().defaultApiBase)) {
+      try {
+        const updateCheck = await checkForUpdate(id);
+        if (updateCheck.hasUpdate) {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('update-status-change', {
+              gameId: id,
+              status: 'checking',
+              message: 'Update available',
+              manifest: updateCheck.manifest,
+              forceUpdate: updateCheck.forceUpdate,
+            });
+          }
+          resolve({
+            success: false,
+            error: updateCheck.forceUpdate
+              ? '需要强制更新后才能启动游戏'
+              : '游戏有新版本可用，请先更新',
+            needsUpdate: true,
+            forceUpdate: updateCheck.forceUpdate,
+            manifest: updateCheck.manifest,
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('Update check failed, proceeding with launch:', err.message);
+        // Fall through to normal launch
+      }
     }
 
     const exePath = game.exePath;
