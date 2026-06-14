@@ -94,7 +94,7 @@ html, body {
   background: var(--glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
+  border: none;
   border-radius: 12px;
   padding: 0 18px;
   z-index: 5;
@@ -102,6 +102,7 @@ html, body {
 
 #update-panel.visible {
   max-height: 300px;
+  border: 1px solid var(--glass-border);
   padding: 16px 18px;
 }
 
