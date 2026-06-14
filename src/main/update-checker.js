@@ -132,4 +132,4 @@ async function pollPreDownloads() {
   return results;
 }
 
-module.exports = { checkForUpdate, pollPreDownloads, compareVersions, fetchJSON };
+module.exports = { checkForUpdate, pollPreDownloads, compareVersions, fetchJSON, buildApiUrl };
