@@ -3,6 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const { getAllGames, getGameById, addGame, updateGame, removeGame, getSettings, updateSettings } = require('./store');
 const gameLauncher = require('./game-launcher');
+const { checkForUpdate, pollPreDownloads } = require('./update-checker');
+const { download, pause, cancel } = require('./download-manager');
+const { install, rollback } = require('./install-manager');
 
 let mainWindow = null;
 
@@ -28,6 +31,11 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+
+  // Start pre-download polling if enabled
+  if (settings.autoCheckUpdate) {
+    startPreDownloadPolling();
+  }
 
   // 保存窗口状态
   mainWindow.on('close', () => {
@@ -220,6 +228,157 @@ ipcMain.handle('update-settings', (_e, updates) => updateSettings(updates));
 
 // 游戏启动
 ipcMain.handle('launch-game', (_e, id) => gameLauncher.launch(id, mainWindow));
+
+// === Pre-download polling ===
+let preDownloadTimer = null;
+
+function startPreDownloadPolling() {
+  const settings = getSettings();
+  const minutes = settings.preDownloadPollMinutes || 30;
+
+  if (preDownloadTimer) clearInterval(preDownloadTimer);
+
+  doPreDownloadPoll();
+
+  preDownloadTimer = setInterval(doPreDownloadPoll, minutes * 60 * 1000);
+}
+
+async function doPreDownloadPoll() {
+  try {
+    const results = await pollPreDownloads();
+    for (const { gameId, manifest } of results) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('predownload-ready', {
+          gameId,
+          version: manifest.preDownload.version,
+          manifest
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Pre-download poll error:', err.message);
+  }
+}
+
+// === Update System ===
+
+// Check for updates
+ipcMain.handle('check-update', async (_e, gameId) => {
+  try {
+    return await checkForUpdate(gameId);
+  } catch (err) {
+    console.error('check-update error:', err.message);
+    return { hasUpdate: false, isPreDownload: false, forceUpdate: false, manifest: null, currentVersion: '' };
+  }
+});
+
+// Start download
+ipcMain.handle('start-download', async (_e, gameId, mode) => {
+  const game = require('./store').getGameById(gameId);
+  if (!game) return { success: false, error: 'Game not found' };
+
+  try {
+    const check = await checkForUpdate(gameId);
+    if (!check.hasUpdate && !check.isPreDownload) {
+      return { success: false, error: 'No update available' };
+    }
+
+    const manifest = check.manifest;
+    let downloadOptions;
+
+    if (check.isPreDownload) {
+      const pd = manifest.preDownload;
+      downloadOptions = { url: pd.url, chunks: pd.chunks, totalSize: pd.size, sha256: pd.sha256, mode: 'full' };
+    } else if (mode === 'delta' && manifest.update.delta) {
+      const delta = manifest.update.delta;
+      downloadOptions = { url: delta.url, chunks: delta.chunks, totalSize: delta.size, sha256: delta.sha256, mode: 'delta' };
+    } else {
+      const upd = manifest.update;
+      downloadOptions = { url: upd.url, chunks: upd.chunks, totalSize: upd.size, sha256: upd.sha256, mode: 'full' };
+    }
+
+    const targetVer = check.isPreDownload ? manifest.preDownload.version : manifest.update.version;
+    require('./store').updateGame(gameId, {
+      targetVersion: targetVer,
+      updateMode: downloadOptions.mode,
+      updateLog: manifest.updateLog || '',
+      isPreDownload: check.isPreDownload,
+    });
+
+    const result = await download(gameId, downloadOptions, (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('download-progress', { gameId, ...progress });
+      }
+    });
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status-change', {
+        gameId,
+        status: 'done',
+        message: check.isPreDownload ? 'Pre-download complete' : 'Download complete'
+      });
+    }
+
+    return { success: true, ...result };
+  } catch (err) {
+    console.error('start-download error:', err.message);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-error', { gameId, error: err.message });
+    }
+    return { success: false, error: err.message };
+  }
+});
+
+// Pause download
+ipcMain.handle('pause-download', (_e, gameId) => {
+  pause(gameId);
+  return true;
+});
+
+// Cancel download
+ipcMain.handle('cancel-download', (_e, gameId) => {
+  cancel(gameId);
+  return true;
+});
+
+// Start install
+ipcMain.handle('start-install', async (_e, gameId) => {
+  try {
+    await install(gameId);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status-change', {
+        gameId,
+        status: 'idle',
+        message: 'Install complete'
+      });
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('start-install error:', err.message);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-error', { gameId, error: err.message });
+    }
+    return { success: false, error: err.message };
+  }
+});
+
+// Rollback
+ipcMain.handle('rollback-game', async (_e, gameId) => {
+  try {
+    await rollback(gameId);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status-change', {
+        gameId,
+        status: 'idle',
+        message: 'Rollback complete'
+      });
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('rollback-game error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
 
 app.whenReady().then(createWindow);
 
