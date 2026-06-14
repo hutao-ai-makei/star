@@ -19,6 +19,7 @@ async function init() {
   bindLaunchButton();
   bindAddButton();
   bindGameEvents();
+  UpdatePanel.init();
 }
 
 async function loadGames() {
@@ -35,6 +36,7 @@ function renderAll() {
     coverArea.style.background = 'linear-gradient(135deg, #2D1B69 0%, #1a3a5c 40%, #0d2137 100%)';
     launchBtn.style.display = 'none';
     emptyStateEl.style.display = '';
+    UpdatePanel.hide();
     return;
   }
 
@@ -48,6 +50,20 @@ function renderAll() {
 
   renderLibrary(gameListEl, games, selectedGameId, onGameSelect);
   renderDetail(games.find(g => g.id === selectedGameId));
+
+  window._currentGame = games.find(g => g.id === selectedGameId);
+
+  // Refresh update panel state for selected game
+  const selGame = games.find(g => g.id === selectedGameId);
+  if (selGame) {
+    if (selGame.updateStatus === 'downloading') {
+      UpdatePanel.show('downloading', { gameId: selGame.id, ...selGame.downloadProgress });
+    } else if (selGame.updateStatus === 'error') {
+      UpdatePanel.show('error', { gameId: selGame.id, error: '上次更新失败，请重试' });
+    } else if (selGame.updateStatus === 'done') {
+      UpdatePanel.show('done', { gameId: selGame.id, version: selGame.targetVersion, isPreDownload: selGame.isPreDownload });
+    }
+  }
 }
 
 function onGameSelect(id) {
@@ -79,17 +95,52 @@ function bindKeyboard() {
 function bindLaunchButton() {
   launchBtn.addEventListener('click', async () => {
     if (!selectedGameId) return;
-    const result = await window.electronAPI.launchGame(selectedGameId);
-    if (!result.success) {
-      const game = games.find(g => g.id === selectedGameId);
-      if (result.error && result.error.includes('找不到')) {
-        gameNameEl.textContent = (game?.name || '') + ' — 文件丢失';
-        lastPlayedEl.textContent = '找不到可执行文件，请重新定位';
-      } else if (!result.error.includes('已在运行')) {
-        alert('启动失败：' + result.error);
+    const game = games.find(g => g.id === selectedGameId);
+    window._currentGame = game;
+
+    // First, check for updates
+    if (game.packageId) {
+      try {
+        const check = await window.electronAPI.checkUpdate(selectedGameId);
+        if (check.hasUpdate) {
+          UpdatePanel.show(check.forceUpdate ? 'force' : 'available', {
+            gameId: selectedGameId,
+            manifest: check.manifest,
+            forceUpdate: check.forceUpdate,
+          });
+
+          window._pendingLaunch = () => doLaunch(selectedGameId);
+          return;
+        }
+      } catch (err) {
+        console.error('Update check failed:', err);
+        // Fall through to normal launch
       }
     }
+
+    // No update — launch directly
+    doLaunch(selectedGameId);
   });
+}
+
+/**
+ * Actually launch the game (update check already done).
+ */
+async function doLaunch(gameId) {
+  const result = await window.electronAPI.launchGame(gameId);
+  if (!result.success) {
+    const game = games.find(g => g.id === gameId);
+    if (result.needsUpdate) {
+      // Update panel already showing, do nothing extra
+      return;
+    }
+    if (result.error && result.error.includes('找不到')) {
+      gameNameEl.textContent = (game?.name || '') + ' — 文件丢失';
+      lastPlayedEl.textContent = '找不到可执行文件，请重新定位';
+    } else if (!result.error.includes('已在运行')) {
+      alert('启动失败：' + result.error);
+    }
+  }
 }
 
 function bindAddButton() {
