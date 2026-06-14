@@ -9,14 +9,10 @@ files:
   - package.json
 win:
   target:
-    - target: nsis
+    - target: portable
+      arch:
+        - x64
+    - target: zip
       arch:
         - x64
   icon: resources/icon.ico
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  installerIcon: resources/icon.ico
-  uninstallerIcon: resources/icon.ico
-  installerHeaderIcon: resources/icon.ico
-  deleteAppDataOnUninstall: false

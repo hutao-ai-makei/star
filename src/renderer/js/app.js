@@ -94,6 +94,16 @@ function bindLaunchButton() {
 
 function bindAddButton() {
   addGameBtn.addEventListener('click', openAddGameDialog);
+
+  // Settings button
+  const settingsBtn = document.getElementById('settings-btn');
+  settingsBtn.addEventListener('click', () => {
+    openSettingsPanel(games, async () => {
+      games = await window.electronAPI.getGames();
+      selectedGameId = games.length > 0 ? games[0].id : null;
+      renderAll();
+    });
+  });
 }
 
 function bindGameEvents() {

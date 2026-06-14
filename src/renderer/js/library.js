@@ -15,6 +15,9 @@ function renderLibrary(containerEl, games, selectedId, onSelect) {
     if (game.coverPath) {
       const coverUrl = game.coverPath.replace(/\\/g, '/');
       el.style.backgroundImage = `url(file:///${coverUrl})`;
+    } else if (game.iconPath) {
+      const iconUrl = game.iconPath.replace(/\\/g, '/');
+      el.style.backgroundImage = `url(file:///${iconUrl})`;
     } else {
       el.textContent = '🎮';
       el.style.display = 'flex';

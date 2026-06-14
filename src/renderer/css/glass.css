@@ -106,3 +106,414 @@
 #game-list {
   scroll-behavior: smooth;
 }
+
+/* === Settings Panel === */
+
+/* Settings button in sidebar */
+#settings-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-light);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+#settings-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--accent);
+}
+
+/* Overlay backdrop */
+#settings-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Panel card */
+#settings-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 21;
+  width: 600px;
+  max-width: calc(100vw - 100px);
+  height: 440px;
+  max-height: calc(100vh - 80px);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+#settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+#settings-close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-light);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+#settings-close-btn:hover {
+  background: rgba(244, 67, 54, 0.15);
+  color: #d32f2f;
+}
+
+/* Game list area */
+#settings-game-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+#settings-game-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+#settings-game-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 2px;
+}
+
+/* Game item */
+.settings-game-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-game-item:hover {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.settings-game-item.expanded {
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 12px 12px 0 0;
+}
+
+/* Game cover thumbnail */
+.settings-game-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Game info */
+.settings-game-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-game-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-game-meta {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+/* Expand hint */
+.settings-expand-hint {
+  font-size: 11px;
+  color: var(--text-light);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.settings-game-item:hover .settings-expand-hint {
+  opacity: 1;
+}
+
+/* Edit area */
+.settings-edit-area {
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 0 0 12px 12px;
+  margin-bottom: 8px;
+}
+
+.settings-edit-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Form fields */
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.settings-input {
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-family: var(--font-family);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.settings-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.settings-input::placeholder {
+  color: rgba(45, 43, 85, 0.3);
+}
+
+.settings-input[readonly] {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-light);
+  cursor: default;
+}
+
+.settings-textarea {
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-family: var(--font-family);
+  color: var(--text);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.settings-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+/* Path row */
+.settings-path-row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-path-row .settings-input {
+  flex: 1;
+}
+
+/* Browse button */
+.settings-browse-btn {
+  padding: 8px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.settings-browse-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Scan folder button */
+.settings-scan-btn {
+  padding: 8px 12px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 8px;
+  background: rgba(102, 126, 234, 0.08);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.settings-scan-btn:hover {
+  background: rgba(102, 126, 234, 0.18);
+}
+
+/* === Media Arrows === */
+.media-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 40px;
+  height: 64px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+  opacity: 0;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+#media-arrow-left  { left: 8px; }
+#media-arrow-right { right: 8px; }
+
+.media-arrow:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* Extract icon button */
+.settings-icon-btn {
+  padding: 8px 12px;
+  border: 1px solid rgba(102, 126, 234, 0.15);
+  border-radius: 8px;
+  background: rgba(102, 126, 234, 0.06);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.settings-icon-btn:hover {
+  background: rgba(102, 126, 234, 0.15);
+}
+
+/* Rating stars */
+.settings-rating {
+  display: flex;
+  gap: 2px;
+}
+
+.rating-star {
+  font-size: 22px;
+  color: rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: color 0.1s, transform 0.1s;
+  line-height: 1;
+}
+
+.rating-star:hover {
+  transform: scale(1.2);
+}
+
+.rating-star.active {
+  color: #ffb300;
+}
+
+/* Stats row */
+.settings-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+/* Edit action buttons */
+.settings-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.settings-save-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.settings-save-btn:hover {
+  background: #5a6fd6;
+  transform: scale(1.02);
+}
+
+.settings-delete-btn {
+  padding: 8px 16px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
+  border-radius: 8px;
+  background: transparent;
+  color: #d32f2f;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.settings-delete-btn:hover {
+  background: rgba(244, 67, 54, 0.08);
+  border-color: rgba(244, 67, 54, 0.4);
+}

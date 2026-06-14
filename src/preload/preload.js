@@ -14,6 +14,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 文件对话框
   selectExeFile: () => ipcRenderer.invoke('select-exe-file'),
   selectCoverFile: () => ipcRenderer.invoke('select-cover-file'),
+  selectBackgroundFile: () => ipcRenderer.invoke('select-background-file'),
+  selectVideoFile: () => ipcRenderer.invoke('select-video-file'),
+  selectMediaDir: () => ipcRenderer.invoke('select-media-dir'),
+  scanMediaDir: (dirPath) => ipcRenderer.invoke('scan-media-dir', dirPath),
+  selectFolder: () => ipcRenderer.invoke('select-folder'),
+  scanFolderExe: (folderPath) => ipcRenderer.invoke('scan-folder-exe', folderPath),
+
+  // 图标提取
+  extractExeIcon: (gameId, exePath) => ipcRenderer.invoke('extract-exe-icon', gameId, exePath),
 
   // 设置
   getSettings: () => ipcRenderer.invoke('get-settings'),
