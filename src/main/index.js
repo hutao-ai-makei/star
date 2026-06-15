@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { getAllGames, getGameById, addGame, updateGame, removeGame, reorderGame, getSettings, updateSettings } = require('./store');
+const { getAllGames, getGameById, addGame, updateGame, removeGame, reorderGames, getSettings, updateSettings } = require('./store');
 const gameLauncher = require('./game-launcher');
 const { checkForUpdate, pollPreDownloads } = require('./update-checker');
 const { download, pause, cancel } = require('./download-manager');
@@ -80,7 +80,7 @@ ipcMain.handle('add-game', async (_e, exePath) => {
 
 ipcMain.handle('update-game', (_e, id, updates) => updateGame(id, updates));
 ipcMain.handle('remove-game', (_e, id) => removeGame(id));
-ipcMain.handle('reorder-game', (_e, id, direction) => { reorderGame(id, direction); });
+ipcMain.handle('reorder-games', (_e, orderedIds) => { reorderGames(orderedIds); });
 
 // 文件选择
 ipcMain.handle('select-exe-file', async () => {

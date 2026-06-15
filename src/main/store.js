@@ -120,23 +120,13 @@ function removeGame(id) {
   writeData(data);
 }
 
-function reorderGame(id, direction) {
+function reorderGames(orderedIds) {
   const data = readData();
-  const games = data.games;
-  // Assign default sortOrder
-  games.forEach((g, i) => { if (g.sortOrder == null) g.sortOrder = i; });
-  games.sort((a, b) => a.sortOrder - b.sortOrder);
-
-  const idx = games.findIndex(g => g.id === id);
-  if (idx === -1) return;
-  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-  if (targetIdx < 0 || targetIdx >= games.length) return;
-
-  // Swap sortOrder
-  const tmp = games[idx].sortOrder;
-  games[idx].sortOrder = games[targetIdx].sortOrder;
-  games[targetIdx].sortOrder = tmp;
-
+  // Assign sequential sortOrder based on new order
+  orderedIds.forEach((id, idx) => {
+    const game = data.games.find(g => g.id === id);
+    if (game) game.sortOrder = idx;
+  });
   writeData(data);
 }
 
@@ -154,4 +144,4 @@ function updateSettings(updates) {
   return data.settings;
 }
 
-module.exports = { getAllGames, getGameById, addGame, updateGame, removeGame, reorderGame, getSettings, updateSettings };
+module.exports = { getAllGames, getGameById, addGame, updateGame, removeGame, reorderGames, getSettings, updateSettings };

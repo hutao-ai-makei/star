@@ -272,39 +272,45 @@
   transition: opacity 0.15s;
 }
 
-/* Order buttons */
-.settings-order-btns {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-right: 8px;
-}
-
-.settings-order-btn {
-  width: 22px;
-  height: 18px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 4px;
-  background: rgba(255,255,255,0.1);
-  color: var(--text-light);
-  font-size: 8px;
-  cursor: pointer;
+/* Drag handle */
+.settings-drag-handle {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
-  padding: 0;
+  width: 20px;
+  height: 40px;
+  cursor: grab;
+  color: var(--text-light);
+  font-size: 14px;
   line-height: 1;
+  letter-spacing: -2px;
+  opacity: 0.4;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+  user-select: none;
 }
 
-.settings-order-btn:hover:not(.disabled) {
-  background: rgba(255,255,255,0.3);
+.settings-game-item:hover .settings-drag-handle {
+  opacity: 0.8;
   color: var(--text);
 }
 
-.settings-order-btn.disabled {
-  opacity: 0.25;
-  cursor: default;
+.settings-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Drag states */
+.settings-game-item.dragging {
+  opacity: 0.4;
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.settings-game-item.drop-above {
+  border-top: 2px solid rgba(102, 126, 234, 0.8);
+}
+
+.settings-game-item.drop-below {
+  border-bottom: 2px solid rgba(102, 126, 234, 0.8);
 }
 
 .settings-game-item:hover .settings-expand-hint {

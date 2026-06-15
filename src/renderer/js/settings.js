@@ -5,6 +5,7 @@
 let settingsGames = [];
 let expandedGameId = null;
 let onSettingsClose = null; // 关闭回调，由 app.js 注册
+let dragSrcGameId = null;   // 正在拖拽的游戏 ID
 
 // === DOM 缓存 ===
 let panelEl, overlayEl, closeBtnEl, gameListPanelEl;
@@ -55,6 +56,7 @@ function renderSettingsGames() {
   settingsGames.forEach(game => {
     const item = document.createElement('div');
     item.className = 'settings-game-item' + (game.id === expandedGameId ? ' expanded' : '');
+    item.dataset.gameId = game.id;
 
     // 封面缩略图
     const cover = document.createElement('div');
@@ -79,42 +81,32 @@ function renderSettingsGames() {
       <div class="settings-game-meta">${formatPlayTime(game.totalPlayTime) || '尚未游玩'} · ${formatLastPlayed(game.lastPlayedAt)}</div>
     `;
 
-    // 排序按钮
-    const orderBtns = document.createElement('div');
-    orderBtns.className = 'settings-order-btns';
-    const idx = settingsGames.indexOf(game);
-    orderBtns.innerHTML = `
-      <button class="settings-order-btn order-up${idx === 0 ? ' disabled' : ''}" data-game-id="${game.id}" data-dir="up" title="上移">▲</button>
-      <button class="settings-order-btn order-down${idx === settingsGames.length - 1 ? ' disabled' : ''}" data-game-id="${game.id}" data-dir="down" title="下移">▼</button>
-    `;
+    // 拖拽手柄
+    const dragHandle = document.createElement('div');
+    dragHandle.className = 'settings-drag-handle';
+    dragHandle.innerHTML = '⋮⋮';
+    dragHandle.title = '拖拽排序';
 
     // 操作按钮
     const actions = document.createElement('div');
     actions.className = 'settings-game-actions';
     actions.innerHTML = `<span class="settings-expand-hint">编辑 ▸</span>`;
 
-    item.appendChild(orderBtns);
+    item.appendChild(dragHandle);
     item.appendChild(cover);
     item.appendChild(info);
     item.appendChild(actions);
 
-    // 排序按钮事件
-    orderBtns.querySelectorAll('.settings-order-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (btn.classList.contains('disabled')) return;
-        const gid = btn.dataset.gameId;
-        const dir = btn.dataset.dir;
-        await window.electronAPI.reorderGame(gid, dir);
-        // 重新加载并刷新
-        settingsGames = await window.electronAPI.getGames();
-        renderSettingsGames();
-      });
-    });
+    // 拖拽事件
+    item.draggable = true;
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('drop', handleDrop);
+    item.addEventListener('dragend', handleDragEnd);
 
     // 点击展开/折叠
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.settings-delete-btn') || e.target.closest('.settings-browse-btn') || e.target.closest('.settings-scan-btn') || e.target.closest('.settings-order-btn')) return;
+      if (e.target.closest('.settings-delete-btn') || e.target.closest('.settings-browse-btn') || e.target.closest('.settings-scan-btn') || e.target.closest('.settings-drag-handle')) return;
       if (expandedGameId === game.id) {
         expandedGameId = null;
       } else {
@@ -140,6 +132,88 @@ function renderSettingsGames() {
   if (expandedGameId) {
     bindEditEvents(expandedGameId);
   }
+}
+
+// === 拖拽排序事件处理 ===
+
+function handleDragStart(e) {
+  const item = e.target.closest('.settings-game-item');
+  if (!item) return;
+  dragSrcGameId = settingsGames.find(g => g.id === item.dataset.gameId)?.id;
+  if (!dragSrcGameId) return;
+
+  item.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragSrcGameId);
+  // 设置拖拽图像为半透明
+  setTimeout(() => { if (item.classList.contains('dragging')) item.style.opacity = '0.4'; }, 0);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+
+  const item = e.target.closest('.settings-game-item');
+  if (!item) return;
+  const gameId = item.dataset.gameId;
+  if (!gameId || gameId === dragSrcGameId) return;
+
+  // 清除之前的指示器
+  document.querySelectorAll('.settings-game-item').forEach(el => el.classList.remove('drop-above', 'drop-below'));
+
+  // 根据鼠标位置决定插入上方还是下方
+  const rect = item.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  if (e.clientY < midY) {
+    item.classList.add('drop-above');
+  } else {
+    item.classList.add('drop-below');
+  }
+}
+
+async function handleDrop(e) {
+  e.preventDefault();
+  const item = e.target.closest('.settings-game-item');
+  if (!item) return;
+  const targetId = item.dataset.gameId;
+  if (!targetId || targetId === dragSrcGameId) return;
+
+  const games = [...settingsGames];
+  const srcIdx = games.findIndex(g => g.id === dragSrcGameId);
+  let targetIdx = games.findIndex(g => g.id === targetId);
+  if (srcIdx === -1 || targetIdx === -1) return;
+
+  // 移除源项
+  const [moved] = games.splice(srcIdx, 1);
+  // 移除后调整目标索引
+  if (srcIdx < targetIdx) targetIdx--;
+
+  // 根据鼠标位置决定插入上方还是下方
+  const rect = item.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  const insertIdx = e.clientY < midY ? targetIdx : targetIdx + 1;
+
+  games.splice(insertIdx, 0, moved);
+
+  // 更新本地状态和服务器
+  settingsGames = games;
+  const orderedIds = games.map(g => g.id);
+  await window.electronAPI.reorderGames(orderedIds);
+
+  renderSettingsGames();
+}
+
+function handleDragEnd(e) {
+  const item = e.target.closest('.settings-game-item');
+  if (item) {
+    item.classList.remove('dragging');
+    item.style.opacity = '';
+  }
+  // 清除所有指示器
+  document.querySelectorAll('.settings-game-item').forEach(el => {
+    el.classList.remove('drop-above', 'drop-below');
+  });
+  dragSrcGameId = null;
 }
 
 // === 编辑表单（精简版：仅名称、exe路径、封面） ===
