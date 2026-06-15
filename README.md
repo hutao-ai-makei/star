@@ -1,5 +1,7 @@
 # 🌟 Star Launcher
 
+[![Download](https://img.shields.io/badge/下载-v1.1.0-blue)](https://github.com/hutao-ai-makei/star/releases/latest)
+
 > 第三方游戏启动器 — 极简玻璃拟态风格
 
 基于 Electron 打造的轻量级游戏启动器，采用流行的 Glassmorphism（玻璃拟态）设计风格，让你优雅地管理和启动本地游戏。
