@@ -197,6 +197,16 @@ html, body {
   transition: width 0.3s ease;
 }
 
+.update-progress-bar.update-progress-indeterminate {
+  width: 40%;
+  animation: update-indeterminate 1.2s infinite ease-in-out;
+}
+
+@keyframes update-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
 .update-progress-text {
   position: absolute;
   right: 0;

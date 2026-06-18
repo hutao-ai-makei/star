@@ -4,8 +4,7 @@ const fs = require('fs');
 const { getAllGames, getGameById, addGame, updateGame, removeGame, reorderGames, getSettings, updateSettings } = require('./store');
 const gameLauncher = require('./game-launcher');
 const { checkForUpdate, pollPreDownloads } = require('./update-checker');
-const { download, pause, cancel } = require('./download-manager');
-const { install, rollback } = require('./install-manager');
+const { UpdateTask } = require('./update-task');
 
 let mainWindow = null;
 
@@ -263,17 +262,48 @@ async function doPreDownloadPoll() {
 
 // === Update System ===
 
+const activeTasks = new Map(); // gameId -> UpdateTask
+
+function sendToRenderer(channel, data) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, data);
+  }
+}
+
+function createUpdateTask(gameId, check) {
+  // Cancel any existing task for this game
+  const existing = activeTasks.get(gameId);
+  if (existing) {
+    try { existing.cancel(); } catch (_) {}
+  }
+
+  const task = new UpdateTask(gameId, check, {
+    onStatusChange: (data) => {
+      sendToRenderer('update-status-change', data);
+    },
+    onProgress: (data) => {
+      sendToRenderer('download-progress', data);
+    },
+    onError: (data) => {
+      sendToRenderer('update-error', data);
+    },
+  });
+
+  activeTasks.set(gameId, task);
+  return task;
+}
+
 // Check for updates
 ipcMain.handle('check-update', async (_e, gameId) => {
   try {
     return await checkForUpdate(gameId);
   } catch (err) {
     console.error('check-update error:', err.message);
-    return { hasUpdate: false, isPreDownload: false, forceUpdate: false, manifest: null, currentVersion: '' };
+    return { hasUpdate: false, isPreDownload: false, forceUpdate: false, manifest: null, currentVersion: '', targetVersion: '', reason: null };
   }
 });
 
-// Start download
+// Start download (and install)
 ipcMain.handle('start-download', async (_e, gameId, mode) => {
   const game = require('./store').getGameById(gameId);
   if (!game) return { success: false, error: 'Game not found' };
@@ -284,96 +314,128 @@ ipcMain.handle('start-download', async (_e, gameId, mode) => {
       return { success: false, error: 'No update available' };
     }
 
-    const manifest = check.manifest;
-    let downloadOptions;
-
-    if (check.isPreDownload) {
-      const pd = manifest.preDownload;
-      downloadOptions = { url: pd.url, chunks: pd.chunks, totalSize: pd.size, sha256: pd.sha256, mode: 'full' };
-    } else if (mode === 'delta' && manifest.update.delta) {
-      const delta = manifest.update.delta;
-      downloadOptions = { url: delta.url, chunks: delta.chunks, totalSize: delta.size, sha256: delta.sha256, mode: 'delta' };
-    } else {
-      const upd = manifest.update;
-      downloadOptions = { url: upd.url, chunks: upd.chunks, totalSize: upd.size, sha256: upd.sha256, mode: 'full' };
+    // Use delta package if requested and available
+    if (!check.isPreDownload && mode === 'delta' && check.manifest?.update?.delta) {
+      check.manifest = {
+        ...check.manifest,
+        update: check.manifest.update.delta,
+      };
     }
 
-    const targetVer = check.isPreDownload ? manifest.preDownload.version : manifest.update.version;
+    // Persist update metadata
     require('./store').updateGame(gameId, {
-      targetVersion: targetVer,
-      updateMode: downloadOptions.mode,
-      updateLog: manifest.updateLog || '',
+      targetVersion: check.targetVersion,
+      updateMode: mode === 'delta' ? 'delta' : 'full',
+      updateLog: check.manifest?.updateLog || '',
       isPreDownload: check.isPreDownload,
     });
 
-    const result = await download(gameId, downloadOptions, (progress) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('download-progress', { gameId, ...progress });
-      }
+    const task = createUpdateTask(gameId, check);
+    await task.prepare();
+
+    // Start download+install in background so the IPC call returns immediately
+    task.start().catch((err) => {
+      console.error('start-download task error:', err.message);
     });
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status-change', {
-        gameId,
-        status: 'done',
-        message: check.isPreDownload ? 'Pre-download complete' : 'Download complete'
-      });
-    }
-
-    return { success: true, ...result };
+    return { success: true, taskId: task.id };
   } catch (err) {
     console.error('start-download error:', err.message);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-error', { gameId, error: err.message });
-    }
+    sendToRenderer('update-error', { gameId, error: err.message });
     return { success: false, error: err.message };
   }
 });
 
 // Pause download
 ipcMain.handle('pause-download', (_e, gameId) => {
-  pause(gameId);
-  return true;
+  const task = activeTasks.get(gameId);
+  if (task) {
+    task.pause();
+    return { success: true };
+  }
+  return { success: false, error: 'No active download' };
 });
 
 // Cancel download
 ipcMain.handle('cancel-download', (_e, gameId) => {
-  cancel(gameId);
-  return true;
+  const task = activeTasks.get(gameId);
+  if (task) {
+    task.cancel();
+    activeTasks.delete(gameId);
+    return { success: true };
+  }
+
+  // Also clear persisted update state if no active task
+  require('./store').updateGame(gameId, {
+    updateStatus: 'idle',
+    targetVersion: '',
+    downloadProgress: { totalBytes: 0, downloadedBytes: 0, speed: 0, chunks: [] },
+  });
+
+  return { success: true };
 });
 
-// Start install
+// Start install (used when the user clicks install after a pre-download or retry)
 ipcMain.handle('start-install', async (_e, gameId) => {
   try {
-    await install(gameId);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status-change', {
-        gameId,
-        status: 'idle',
-        message: 'Install complete'
-      });
+    const check = await checkForUpdate(gameId);
+    if (!check.hasUpdate && !check.isPreDownload) {
+      return { success: false, error: 'No update available' };
     }
-    return { success: true };
+
+    const task = createUpdateTask(gameId, check);
+    await task.prepare();
+
+    task.start().catch((err) => {
+      console.error('start-install task error:', err.message);
+    });
+
+    return { success: true, taskId: task.id };
   } catch (err) {
     console.error('start-install error:', err.message);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-error', { gameId, error: err.message });
-    }
+    sendToRenderer('update-error', { gameId, error: err.message });
     return { success: false, error: err.message };
   }
 });
 
 // Rollback
 ipcMain.handle('rollback-game', async (_e, gameId) => {
+  const task = activeTasks.get(gameId);
+
   try {
-    await rollback(gameId);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status-change', {
-        gameId,
-        status: 'idle',
-        message: 'Rollback complete'
-      });
+    if (task) {
+      await task.rollback();
+    } else {
+      // No active task: roll back using the latest backup if any
+      const { rollbackUpdate } = require('./install-manager');
+      const game = require('./store').getGameById(gameId);
+      if (!game) throw new Error('Game not found');
+
+      const installDir = game.installDir || path.dirname(game.exePath);
+      const backupDir = path.join(installDir, '.backup');
+      if (!fs.existsSync(backupDir)) {
+        throw new Error('No backup available for rollback');
+      }
+
+      const backups = fs.readdirSync(backupDir, { withFileTypes: true })
+        .filter(e => e.isDirectory())
+        .map(e => e.name)
+        .sort()
+        .reverse();
+
+      if (backups.length === 0) {
+        throw new Error('No backup versions found');
+      }
+
+      await rollbackUpdate({ installDir, id: backups[0] });
     }
+
+    sendToRenderer('update-status-change', {
+      gameId,
+      status: 'idle',
+      message: 'Rollback complete'
+    });
+
     return { success: true };
   } catch (err) {
     console.error('rollback-game error:', err.message);

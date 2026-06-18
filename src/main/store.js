@@ -30,7 +30,10 @@ function readData() {
         defaultApiBase: '',
         autoCheckUpdate: true,
         preDownloadPollMinutes: 30,
-        maxConcurrentChunks: 4,
+        maxConcurrentChunks: 4,           // 兼容旧配置
+        maxConcurrentDownloads: 4,
+        maxDownloadRetries: 3,
+        downloadSpeedLimit: 0,            // 0 表示不限速，单位 bytes/s
       }
     };
     fs.writeFileSync(LIBRARY_FILE, JSON.stringify(defaults, null, 2), 'utf-8');
@@ -88,6 +91,7 @@ function addGame({ name, exePath, coverPath }) {
     apiBase: '',
     currentVersion: '',
     targetVersion: '',
+    ignoreVersion: '',
     updateStatus: 'idle',
     updateMode: 'full',
     downloadProgress: {
@@ -99,6 +103,7 @@ function addGame({ name, exePath, coverPath }) {
     updateLog: '',
     installDir: '',
     isPreDownload: false,
+    predownloadInfo: null,            // { localVersion, predownloadVersion, audioLanguage }
   };
   data.games.push(newGame);
   writeData(data);

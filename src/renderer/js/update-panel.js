@@ -36,11 +36,19 @@ function showUpdatePanel(state, data) {
   updatePanelEl.classList.add('visible');
 
   switch (state) {
+    case 'checking': renderChecking(data); break;
     case 'force': renderForceUpdate(data); break;
     case 'available': renderNormalUpdate(data); break;
+    case 'pending': renderPending(data); break;
     case 'downloading': renderDownloading(data); break;
+    case 'decompressing': renderDecompressing(data); break;
+    case 'merging': renderDecompressing(data); break;
+    case 'verifying': renderVerifying(data); break;
+    case 'paused': renderPaused(data); break;
     case 'done': renderDone(data); break;
+    case 'finish': renderDone(data); break;
     case 'error': renderError(data); break;
+    case 'idle': hideUpdatePanel(); break;
   }
 }
 
@@ -126,6 +134,40 @@ function renderNormalUpdate(data) {
   bindActionButtons(data);
 }
 
+function renderChecking(data) {
+  const game = window._currentGame;
+  updateTitleEl.textContent = '🔍 正在检查更新...';
+  updateBodyEl.innerHTML = `
+    <div class="update-version-row">
+      <span>${game?.name || ''}</span>
+    </div>
+    <div class="update-progress-container">
+      <div class="update-progress-bar update-progress-indeterminate"></div>
+    </div>
+  `;
+  updateActionsEl.innerHTML = `
+    <button class="update-btn update-btn-skip" data-action="cancel">✕ 取消</button>
+  `;
+  bindActionButtons(data);
+}
+
+function renderPending(data) {
+  const game = window._currentGame;
+  const targetVer = data.targetVersion || data.version || '';
+  updateTitleEl.textContent = '⏳ 等待下载';
+  updateBodyEl.innerHTML = `
+    <div class="update-version-row">
+      <span>${game?.name || ''} 新版本 ${escapeHTML(targetVer)}</span>
+    </div>
+    <div class="update-size">即将开始下载...</div>
+  `;
+  updateActionsEl.innerHTML = `
+    <button class="update-btn update-btn-secondary" data-action="pause">⏸ 暂停</button>
+    <button class="update-btn update-btn-skip" data-action="cancel">✕ 取消</button>
+  `;
+  bindActionButtons(data);
+}
+
 function renderDownloading(data) {
   const total = data.totalBytes || 0;
   const downloaded = data.downloadedBytes || 0;
@@ -148,6 +190,46 @@ function renderDownloading(data) {
   `;
   updateActionsEl.innerHTML = `
     <button class="update-btn update-btn-secondary" data-action="pause">⏸ 暂停</button>
+    <button class="update-btn update-btn-skip" data-action="cancel">✕ 取消</button>
+  `;
+  bindActionButtons(data);
+}
+
+function renderDecompressing(data) {
+  const percent = data.percent != null ? Math.round(data.percent * 100) : 0;
+  updateTitleEl.textContent = '📦 正在解压更新...';
+  updateBodyEl.innerHTML = `
+    <div class="update-progress-container">
+      <div class="update-progress-bar" style="width:${percent}%"></div>
+      <span class="update-progress-text">${percent}%</span>
+    </div>
+  `;
+  updateActionsEl.innerHTML = `
+    <button class="update-btn update-btn-skip" data-action="cancel">✕ 取消</button>
+  `;
+  bindActionButtons(data);
+}
+
+function renderVerifying(data) {
+  updateTitleEl.textContent = '🔐 正在校验文件...';
+  updateBodyEl.innerHTML = `
+    <div class="update-progress-container">
+      <div class="update-progress-bar update-progress-indeterminate"></div>
+    </div>
+  `;
+  updateActionsEl.innerHTML = `
+    <button class="update-btn update-btn-skip" data-action="cancel">✕ 取消</button>
+  `;
+  bindActionButtons(data);
+}
+
+function renderPaused(data) {
+  updateTitleEl.textContent = '⏸ 下载已暂停';
+  updateBodyEl.innerHTML = `
+    <div class="update-progress-stats">点击继续以下载更新</div>
+  `;
+  updateActionsEl.innerHTML = `
+    <button class="update-btn update-btn-primary" data-action="retry" data-mode="${data.mode || 'full'}">▶ 继续</button>
     <button class="update-btn update-btn-skip" data-action="cancel">✕ 取消</button>
   `;
   bindActionButtons(data);
@@ -234,26 +316,58 @@ function handleStatusChange(data) {
   const game = window._currentGame;
   if (!game || game.id !== gameId) return;
 
-  if (data.manifest && (data.manifest.update || data.manifest.preDownload)) {
+  const status = data.status;
+
+  if (status === 'checking') {
+    showUpdatePanel('checking', data);
+    return;
+  }
+
+  if (data.manifest && (data.manifest.update || data.manifest.preDownload) &&
+      (status === 'available' || status === 'pending' || status === 'idle')) {
     const forceUpdate = data.forceUpdate || data.manifest.forceUpdate;
     showUpdatePanel(forceUpdate ? 'force' : 'available', {
       gameId,
       manifest: data.manifest,
       forceUpdate,
+      targetVersion: data.targetVersion,
     });
-  } else if (data.status === 'done') {
+    return;
+  }
+
+  if (status === 'pending') {
+    showUpdatePanel('pending', data);
+  } else if (status === 'downloading') {
+    showUpdatePanel('downloading', data);
+  } else if (status === 'decompressing' || status === 'merging') {
+    showUpdatePanel('decompressing', data);
+  } else if (status === 'verifying') {
+    showUpdatePanel('verifying', data);
+  } else if (status === 'paused') {
+    showUpdatePanel('paused', data);
+  } else if (status === 'finish' || status === 'done') {
     showUpdatePanel('done', {
       gameId,
-      version: data.message?.replace('Pre-download complete', '') || '',
-      isPreDownload: data.message?.includes('pre-download') || data.message?.includes('Pre-download'),
+      version: data.targetVersion || data.version || '',
+      isPreDownload: data.isPreDownload,
     });
+  } else if (status === 'error') {
+    showUpdatePanel('error', data);
+  } else if (status === 'idle' || status === 'stop') {
+    hideUpdatePanel();
   }
 }
 
 function handleProgress(data) {
   const game = window._currentGame;
   if (!game || game.id !== data.gameId) return;
-  showUpdatePanel('downloading', data);
+
+  const state = data.state || 'downloading';
+  if (state === 'decompressing' || state === 'merging' || state === 'verifying') {
+    showUpdatePanel(state, data);
+  } else {
+    showUpdatePanel('downloading', data);
+  }
 }
 
 function handleError(data) {

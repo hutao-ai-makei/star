@@ -1,6 +1,6 @@
 # 🌟 Star Launcher
 
-[![Download](https://img.shields.io/badge/下载-v1.1.0-blue)](https://github.com/hutao-ai-makei/star/releases/latest)
+[![Download](https://img.shields.io/badge/下载-v1.2.0-blue)](https://github.com/hutao-ai-makei/star/releases/latest)
 
 > 第三方游戏启动器 — 极简玻璃拟态风格
 
@@ -10,8 +10,9 @@
 
 - 🎮 **游戏管理** — 添加、编辑、删除本地游戏，支持自定义名称和路径
 - 🚀 **一键启动** — 快速启动游戏，记录最近游玩时间
+- 🔄 **游戏更新** — 检测更新、断点续传下载、自动安装与回滚，支持预下载
 - 🎨 **玻璃拟态 UI** — 毛玻璃效果界面，可拖拽无边框窗口
-- ⚙️ **设置页面** — 自定义窗口大小、记住窗口位置
+- ⚙️ **设置页面** — 自定义窗口大小、记住窗口位置、下载并发与限速
 - 💾 **本地存储** — 游戏库数据保存在本地 JSON 文件中
 
 ## 🛠 技术栈
@@ -31,6 +32,10 @@ star/
 │   ├── main/                 # Electron 主进程
 │   │   ├── index.js          # 主进程入口，窗口管理 & IPC
 │   │   ├── game-launcher.js  # 游戏启动模块
+│   │   ├── update-checker.js # 更新检测
+│   │   ├── download-engine.js# 通用下载引擎（断点续传 / 并发 / 限速）
+│   │   ├── update-task.js    # 更新任务状态机
+│   │   ├── install-manager.js# 更新安装与回滚
 │   │   └── store.js          # 本地数据存储
 │   ├── preload/
 │   │   └── preload.js        # 预加载脚本（contextBridge）
@@ -44,7 +49,8 @@ star/
 │           ├── add-game.js    # 添加游戏
 │           ├── detail.js      # 游戏详情
 │           ├── library.js     # 游戏库列表
-│           └── settings.js    # 设置页
+│           ├── settings.js    # 设置页
+│           └── update-panel.js# 更新面板
 ├── resources/
 │   └── icon.ico              # 应用图标
 ├── electron-builder.yml      # 打包配置
@@ -81,6 +87,16 @@ npm run build
 - **zip** — 压缩包
 
 ## 📄 更新日志
+
+### v1.2.0 (2026-06-18)
+
+- 🔄 **更新系统重写** — 依据 Starward 更新逻辑规范化实现
+  - 语义化版本比较、忽略版本、强制更新、预下载检测
+  - 通用下载引擎：断点续传、重试、并发控制、限速、SHA256/MD5 校验
+  - 更新任务状态机：`Pending → Downloading → Decompressing/Verifying → Finish`
+  - 精确备份/回滚机制，避免全目录备份
+  - 预下载完成标记与复用
+- ⚙️ **新增下载设置** — 并发数、重试次数、下载限速
 
 ### v1.1.0 (2026-06-15)
 
