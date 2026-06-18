@@ -1,5 +1,5 @@
 /**
- * 设置面板：管理游戏项目（编辑、删除）
+ * 设置面板：左右两栏，支持分类切换与调整大小
  */
 
 let settingsGames = [];
@@ -7,8 +7,14 @@ let expandedGameId = null;
 let onSettingsClose = null; // 关闭回调，由 app.js 注册
 let dragSrcGameId = null;   // 正在拖拽的游戏 ID
 
+let currentCategory = 'games';
+let sidebarWidth = 200;
+const SIDEBAR_MIN = 140;
+const SIDEBAR_MAX = 320;
+
 // === DOM 缓存 ===
-let panelEl, overlayEl, closeBtnEl, gameListPanelEl, globalSettingsEl;
+let panelEl, overlayEl, closeBtnEl, gameListPanelEl, downloadPanelEl;
+let sidebarEl, resizerEl, contentEl;
 
 /**
  * 打开设置面板
@@ -23,8 +29,11 @@ async function openSettingsPanel(games, onClose) {
   ensurePanelDOM();
   overlayEl.style.display = '';
   panelEl.style.display = '';
-  await renderGlobalSettings();
-  renderSettingsGames();
+
+  loadSettingsState();
+  applySidebarWidth();
+  renderSidebar();
+  switchCategory(currentCategory);
 }
 
 function closeSettingsPanel() {
@@ -33,13 +42,63 @@ function closeSettingsPanel() {
   if (onSettingsClose) onSettingsClose();
 }
 
-async function renderGlobalSettings() {
-  if (!globalSettingsEl) return;
+function loadSettingsState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('star-settings-state') || '{}');
+    if (saved.category === 'games' || saved.category === 'download') {
+      currentCategory = saved.category;
+    }
+    if (typeof saved.sidebarWidth === 'number') {
+      sidebarWidth = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, saved.sidebarWidth));
+    }
+  } catch (_) {}
+}
+
+function saveSettingsState() {
+  try {
+    localStorage.setItem('star-settings-state', JSON.stringify({
+      category: currentCategory,
+      sidebarWidth,
+    }));
+  } catch (_) {}
+}
+
+function applySidebarWidth() {
+  if (sidebarEl) {
+    sidebarEl.style.width = `${sidebarWidth}px`;
+  }
+}
+
+function renderSidebar() {
+  if (!sidebarEl) return;
+
+  sidebarEl.querySelectorAll('.settings-category').forEach(el => {
+    el.classList.toggle('active', el.dataset.category === currentCategory);
+  });
+}
+
+function switchCategory(category) {
+  currentCategory = category;
+  saveSettingsState();
+  renderSidebar();
+
+  if (gameListPanelEl) gameListPanelEl.style.display = category === 'games' ? '' : 'none';
+  if (downloadPanelEl) downloadPanelEl.style.display = category === 'download' ? '' : 'none';
+
+  if (category === 'games') {
+    renderSettingsGames();
+  } else if (category === 'download') {
+    renderDownloadSettings();
+  }
+}
+
+async function renderDownloadSettings() {
+  if (!downloadPanelEl) return;
   const settings = await window.electronAPI.getSettings();
 
-  globalSettingsEl.innerHTML = `
-    <div class="settings-global-section">
-      <div class="settings-section-title">📥 下载设置</div>
+  downloadPanelEl.innerHTML = `
+    <div class="settings-download-section">
+      <div class="settings-section-title">📥 下载管理</div>
       <div class="settings-field">
         <label>并发下载数</label>
         <input type="number" id="setting-max-concurrent" value="${Number(settings.maxConcurrentDownloads ?? settings.maxConcurrentChunks ?? 4)}" min="1" max="16" class="settings-input">
@@ -53,15 +112,16 @@ async function renderGlobalSettings() {
         <input type="number" id="setting-speed-limit" value="${Math.round((settings.downloadSpeedLimit || 0) / 1024)}" min="0" class="settings-input">
       </div>
       <div class="settings-edit-actions">
-        <button class="settings-save-btn" id="settings-save-global">保存下载设置</button>
+        <button class="settings-save-btn" id="settings-save-download">保存下载设置</button>
       </div>
     </div>
   `;
 
-  document.getElementById('settings-save-global').addEventListener('click', saveGlobalSettings);
+  const btn = document.getElementById('settings-save-download');
+  if (btn) btn.addEventListener('click', saveDownloadSettings);
 }
 
-async function saveGlobalSettings() {
+async function saveDownloadSettings() {
   const concurrentEl = document.getElementById('setting-max-concurrent');
   const retriesEl = document.getElementById('setting-max-retries');
   const speedEl = document.getElementById('setting-speed-limit');
@@ -76,12 +136,39 @@ async function saveGlobalSettings() {
 
   await window.electronAPI.updateSettings(updates);
 
-  const btn = document.getElementById('settings-save-global');
+  const btn = document.getElementById('settings-save-download');
   if (btn) {
     const original = btn.textContent;
     btn.textContent = '✓ 已保存';
     setTimeout(() => { btn.textContent = original; }, 1500);
   }
+}
+
+function initResizer() {
+  if (!resizerEl || !sidebarEl || !panelEl) return;
+
+  let isResizing = false;
+
+  resizerEl.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    resizerEl.classList.add('resizing');
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const rect = panelEl.getBoundingClientRect();
+    const newWidth = e.clientX - rect.left;
+    sidebarWidth = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, newWidth));
+    sidebarEl.style.width = `${sidebarWidth}px`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isResizing) return;
+    isResizing = false;
+    resizerEl.classList.remove('resizing');
+    saveSettingsState();
+  });
 }
 
 function ensurePanelDOM() {
@@ -90,10 +177,20 @@ function ensurePanelDOM() {
   overlayEl = document.getElementById('settings-overlay');
   closeBtnEl = document.getElementById('settings-close-btn');
   gameListPanelEl = document.getElementById('settings-game-list');
-  globalSettingsEl = document.getElementById('settings-global');
+  downloadPanelEl = document.getElementById('settings-download');
+  sidebarEl = document.getElementById('settings-sidebar');
+  resizerEl = document.getElementById('settings-resizer');
+  contentEl = document.getElementById('settings-content');
 
   overlayEl.addEventListener('click', closeSettingsPanel);
   closeBtnEl.addEventListener('click', closeSettingsPanel);
+
+  sidebarEl.addEventListener('click', (e) => {
+    const cat = e.target.closest('.settings-category')?.dataset.category;
+    if (cat) switchCategory(cat);
+  });
+
+  initResizer();
 }
 
 // === 渲染游戏列表 ===

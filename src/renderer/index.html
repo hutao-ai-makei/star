@@ -54,11 +54,20 @@
       <div id="settings-overlay" style="display:none;"></div>
       <div id="settings-panel" style="display:none;">
         <div id="settings-header">
-          <span>⚙ 游戏管理</span>
+          <span>⚙ 设置</span>
           <button id="settings-close-btn" title="关闭">✕</button>
         </div>
-        <div id="settings-global"></div>
-        <div id="settings-game-list"></div>
+        <div id="settings-body">
+          <div id="settings-sidebar">
+            <div class="settings-category active" data-category="games">🎮 游戏管理</div>
+            <div class="settings-category" data-category="download">📥 下载管理</div>
+          </div>
+          <div id="settings-resizer" title="拖拽调整宽度"></div>
+          <div id="settings-content">
+            <div id="settings-game-list"></div>
+            <div id="settings-download" style="display:none;"></div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
