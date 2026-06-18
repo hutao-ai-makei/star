@@ -270,21 +270,37 @@ function sendToRenderer(channel, data) {
   }
 }
 
-function createUpdateTask(gameId, check) {
-  // Cancel any existing task for this game
+function cleanupActiveTask(gameId, terminalStatus) {
+  const task = activeTasks.get(gameId);
+  if (task && (terminalStatus === 'finish' || terminalStatus === 'stop' || terminalStatus === 'error')) {
+    activeTasks.delete(gameId);
+  }
+}
+
+function createUpdateTask(gameId, check, { resume = false } = {}) {
   const existing = activeTasks.get(gameId);
+
+  // If the user is resuming a paused task, reuse it so cached partial files survive.
+  if (resume && existing && existing.state === 'paused') {
+    return existing;
+  }
+
+  // Otherwise cancel any existing task and start fresh.
   if (existing) {
     try { existing.cancel(); } catch (_) {}
+    activeTasks.delete(gameId);
   }
 
   const task = new UpdateTask(gameId, check, {
     onStatusChange: (data) => {
+      cleanupActiveTask(data.gameId, data.status);
       sendToRenderer('update-status-change', data);
     },
     onProgress: (data) => {
       sendToRenderer('download-progress', data);
     },
     onError: (data) => {
+      cleanupActiveTask(data.gameId, 'error');
       sendToRenderer('update-error', data);
     },
   });
@@ -330,7 +346,15 @@ ipcMain.handle('start-download', async (_e, gameId, mode) => {
       isPreDownload: check.isPreDownload,
     });
 
-    const task = createUpdateTask(gameId, check);
+    const task = createUpdateTask(gameId, check, { resume: true });
+    if (task.state === 'paused') {
+      // Resume the paused task instead of re-preparing it.
+      task.start().catch((err) => {
+        console.error('start-download resume error:', err.message);
+      });
+      return { success: true, taskId: task.id };
+    }
+
     await task.prepare();
 
     // Start download+install in background so the IPC call returns immediately
@@ -379,7 +403,13 @@ ipcMain.handle('cancel-download', (_e, gameId) => {
 ipcMain.handle('start-install', async (_e, gameId) => {
   try {
     const check = await checkForUpdate(gameId);
-    if (!check.hasUpdate && !check.isPreDownload) {
+
+    // Pre-download has not become a formal update yet; installing now would be premature.
+    if (check.isPreDownload) {
+      return { success: false, error: '该版本尚未正式上线，请等待维护结束后再安装' };
+    }
+
+    if (!check.hasUpdate) {
       return { success: false, error: 'No update available' };
     }
 
@@ -403,31 +433,37 @@ ipcMain.handle('rollback-game', async (_e, gameId) => {
   const task = activeTasks.get(gameId);
 
   try {
+    let oldVersion = '';
+
     if (task) {
-      await task.rollback();
+      oldVersion = await task.rollback();
+      activeTasks.delete(gameId);
     } else {
       // No active task: roll back using the latest backup if any
-      const { rollbackUpdate } = require('./install-manager');
+      const { rollbackUpdate, listBackups } = require('./install-manager');
       const game = require('./store').getGameById(gameId);
       if (!game) throw new Error('Game not found');
 
       const installDir = game.installDir || path.dirname(game.exePath);
-      const backupDir = path.join(installDir, '.backup');
-      if (!fs.existsSync(backupDir)) {
+      const backups = listBackups(installDir);
+
+      if (backups.length === 0) {
         throw new Error('No backup available for rollback');
       }
 
-      const backups = fs.readdirSync(backupDir, { withFileTypes: true })
-        .filter(e => e.isDirectory())
-        .map(e => e.name)
-        .sort()
-        .reverse();
+      const latest = backups[0];
+      oldVersion = await rollbackUpdate({ installDir, backupDir: latest.dir });
+    }
 
-      if (backups.length === 0) {
-        throw new Error('No backup versions found');
-      }
-
-      await rollbackUpdate({ installDir, id: backups[0] });
+    // Restore the recorded current version so update detection stays consistent.
+    if (oldVersion) {
+      require('./store').updateGame(gameId, {
+        currentVersion: oldVersion,
+        targetVersion: '',
+        updateStatus: 'idle',
+        isPreDownload: false,
+        predownloadInfo: null,
+      });
     }
 
     sendToRenderer('update-status-change', {

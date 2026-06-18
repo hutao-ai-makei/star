@@ -107,9 +107,15 @@ function downloadResumable(url, destPath, expectedSize, options = {}) {
 
     ensureDir(path.dirname(destPath));
 
-    const startSize = fs.existsSync(destPath) ? fs.statSync(destPath).size : 0;
+    let startSize = fs.existsSync(destPath) ? fs.statSync(destPath).size : 0;
 
-    if (startSize >= expectedSize) {
+    if (startSize > expectedSize) {
+      // Existing file is larger than expected; truncate and restart.
+      fs.truncateSync(destPath, 0);
+      startSize = 0;
+    }
+
+    if (startSize === expectedSize) {
       // Already complete
       resolve();
       return;
@@ -143,6 +149,10 @@ function downloadResumable(url, destPath, expectedSize, options = {}) {
         }
 
         const isResuming = res.statusCode === 206 && startSize > 0;
+        // If we asked for a range but server returned 200, discard partial data and restart.
+        if (!isResuming && startSize > 0) {
+          fs.truncateSync(destPath, 0);
+        }
         const openFlags = isResuming ? 'r+' : 'w';
 
         fs.open(destPath, openFlags, async (err, fd) => {
@@ -154,6 +164,18 @@ function downloadResumable(url, destPath, expectedSize, options = {}) {
           let writeOffset = isResuming ? startSize : 0;
           let receivedThisSession = 0;
           let aborted = false;
+          let pendingWrites = 0;
+          let endReceived = false;
+
+          function finish() {
+            fs.close(fd, (closeErr) => {
+              if (closeErr) {
+                reject(closeErr);
+              } else {
+                resolve();
+              }
+            });
+          }
 
           function cleanup(err) {
             if (aborted) return;
@@ -181,7 +203,11 @@ function downloadResumable(url, destPath, expectedSize, options = {}) {
               }
             }
 
+            if (aborted) return;
+            pendingWrites++;
+
             fs.write(fd, chunk, 0, chunk.length, writeOffset, (writeErr, written) => {
+              pendingWrites--;
               if (writeErr) {
                 cleanup(writeErr);
                 return;
@@ -189,18 +215,19 @@ function downloadResumable(url, destPath, expectedSize, options = {}) {
               writeOffset += written;
               receivedThisSession += written;
               if (onProgress) onProgress(written);
+
+              if (endReceived && pendingWrites === 0) {
+                finish();
+              }
             });
           });
 
           res.on('end', () => {
             if (aborted) return;
-            fs.close(fd, (closeErr) => {
-              if (closeErr) {
-                reject(closeErr);
-              } else {
-                resolve();
-              }
-            });
+            endReceived = true;
+            if (pendingWrites === 0) {
+              finish();
+            }
           });
 
           res.on('error', cleanup);
@@ -270,7 +297,14 @@ async function downloadWithRetry(task, options = {}) {
         throw err;
       }
 
+      // Remove corrupt/partial file before retry (except when the user explicitly paused).
       if (attempt < retries) {
+        try {
+          if (fs.existsSync(destPath) && fs.statSync(destPath).size !== size) {
+            fs.unlinkSync(destPath);
+          }
+        } catch (_) {}
+
         const delay = retryDelay * Math.pow(2, attempt);
         console.warn(`Download retry ${attempt + 1}/${retries} for ${url}: ${err.message}`);
         await sleep(delay);
@@ -313,17 +347,17 @@ async function downloadParallel(tasks, options = {}) {
     return result;
   }
 
-  const results = [];
+  const results = new Map();
   const executing = new Set();
 
-  for (const task of tasks) {
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i];
     const promise = runTask(task).then(result => {
-      results.push(result);
+      results.set(i, result);
       executing.delete(promise);
       return result;
     });
 
-    results.push(promise);
     executing.add(promise);
 
     if (executing.size >= concurrency) {
@@ -332,7 +366,9 @@ async function downloadParallel(tasks, options = {}) {
   }
 
   await Promise.all(executing);
-  return results;
+
+  // Return results in the original task order.
+  return tasks.map((_, i) => results.get(i));
 }
 
 /**

@@ -1,6 +1,6 @@
 # 🌟 Star Launcher
 
-[![Download](https://img.shields.io/badge/下载-v1.2.0-blue)](https://github.com/hutao-ai-makei/star/releases/latest)
+[![Download](https://img.shields.io/badge/下载-v1.2.1-blue)](https://github.com/hutao-ai-makei/star/releases/latest)
 
 > 第三方游戏启动器 — 极简玻璃拟态风格
 
@@ -88,6 +88,21 @@ npm run build
 
 ## 📄 更新日志
 
+### v1.2.1 (2026-06-18)
+
+- 🐛 **修复更新系统关键 Bug**
+  - 修复并行下载结果顺序错乱的问题
+  - 修复断点续传在服务器返回 200 时覆盖已下载数据的问题
+  - 修复下载文件大小异常时无法自动重试的问题
+  - 修复预下载会直接把文件安装到游戏目录的问题
+  - 修复回滚后 `currentVersion` 没有恢复的问题
+  - 修复安装成功后备份被立即删除导致无法回滚的问题
+  - 对不支持的 hdiff 差量包改为报错而不是静默跳过
+  - 修复暂停后继续下载会清空缓存的问题
+  - 修复活跃任务完成后未从内存中清理的问题
+- ⚙️ **补齐下载设置 UI** — 在设置面板新增并发数、重试次数、下载限速
+- 📁 **新增安装目录设置** — 添加游戏时自动推断安装根目录，设置面板可手动修改
+
 ### v1.2.0 (2026-06-18)
 
 - 🔄 **更新系统重写** — 依据 Starward 更新逻辑规范化实现
@@ -96,7 +111,7 @@ npm run build
   - 更新任务状态机：`Pending → Downloading → Decompressing/Verifying → Finish`
   - 精确备份/回滚机制，避免全目录备份
   - 预下载完成标记与复用
-- ⚙️ **新增下载设置** — 并发数、重试次数、下载限速
+- ⚙️ **新增下载设置字段** — 并发数、重试次数、下载限速
 
 ### v1.1.0 (2026-06-15)
 

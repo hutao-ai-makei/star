@@ -49,6 +49,29 @@ function writeData(data) {
   fs.writeFileSync(LIBRARY_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+// === Install dir inference ===
+
+/**
+ * Infer the game installation root directory from the executable path.
+ * Many games place the launcher exe inside Binaries/Win64/; we walk up in that case.
+ */
+function inferInstallDir(exePath) {
+  if (!exePath) return '';
+  const normalized = exePath.replace(/\\/g, '/');
+  const exeDir = path.dirname(normalized);
+
+  // Common Unreal/Unity patterns
+  if (normalized.includes('/Binaries/Win64/')) {
+    return path.normalize(path.join(exeDir, '..', '..', '..'));
+  }
+  if (normalized.includes('/Binaries/')) {
+    return path.normalize(path.join(exeDir, '..', '..'));
+  }
+
+  // Fallback: directory containing the exe
+  return path.dirname(exePath);
+}
+
 // === Game CRUD ===
 
 function getAllGames() {
@@ -101,7 +124,7 @@ function addGame({ name, exePath, coverPath }) {
       chunks: []
     },
     updateLog: '',
-    installDir: '',
+    installDir: inferInstallDir(exePath),
     isPreDownload: false,
     predownloadInfo: null,            // { localVersion, predownloadVersion, audioLanguage }
   };

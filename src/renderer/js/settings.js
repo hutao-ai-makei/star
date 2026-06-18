@@ -8,7 +8,7 @@ let onSettingsClose = null; // 关闭回调，由 app.js 注册
 let dragSrcGameId = null;   // 正在拖拽的游戏 ID
 
 // === DOM 缓存 ===
-let panelEl, overlayEl, closeBtnEl, gameListPanelEl;
+let panelEl, overlayEl, closeBtnEl, gameListPanelEl, globalSettingsEl;
 
 /**
  * 打开设置面板
@@ -23,6 +23,7 @@ async function openSettingsPanel(games, onClose) {
   ensurePanelDOM();
   overlayEl.style.display = '';
   panelEl.style.display = '';
+  await renderGlobalSettings();
   renderSettingsGames();
 }
 
@@ -32,12 +33,64 @@ function closeSettingsPanel() {
   if (onSettingsClose) onSettingsClose();
 }
 
+async function renderGlobalSettings() {
+  if (!globalSettingsEl) return;
+  const settings = await window.electronAPI.getSettings();
+
+  globalSettingsEl.innerHTML = `
+    <div class="settings-global-section">
+      <div class="settings-section-title">📥 下载设置</div>
+      <div class="settings-field">
+        <label>并发下载数</label>
+        <input type="number" id="setting-max-concurrent" value="${Number(settings.maxConcurrentDownloads ?? settings.maxConcurrentChunks ?? 4)}" min="1" max="16" class="settings-input">
+      </div>
+      <div class="settings-field">
+        <label>下载失败重试次数</label>
+        <input type="number" id="setting-max-retries" value="${Number(settings.maxDownloadRetries ?? 3)}" min="0" max="10" class="settings-input">
+      </div>
+      <div class="settings-field">
+        <label>下载限速（KB/s，0 表示不限速）</label>
+        <input type="number" id="setting-speed-limit" value="${Math.round((settings.downloadSpeedLimit || 0) / 1024)}" min="0" class="settings-input">
+      </div>
+      <div class="settings-edit-actions">
+        <button class="settings-save-btn" id="settings-save-global">保存下载设置</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('settings-save-global').addEventListener('click', saveGlobalSettings);
+}
+
+async function saveGlobalSettings() {
+  const concurrentEl = document.getElementById('setting-max-concurrent');
+  const retriesEl = document.getElementById('setting-max-retries');
+  const speedEl = document.getElementById('setting-speed-limit');
+
+  const updates = {};
+  if (concurrentEl) updates.maxConcurrentDownloads = Math.max(1, Math.min(16, Number(concurrentEl.value) || 4));
+  if (retriesEl) updates.maxDownloadRetries = Math.max(0, Math.min(10, Number(retriesEl.value) || 3));
+  if (speedEl) {
+    const kbps = Math.max(0, Number(speedEl.value) || 0);
+    updates.downloadSpeedLimit = kbps * 1024;
+  }
+
+  await window.electronAPI.updateSettings(updates);
+
+  const btn = document.getElementById('settings-save-global');
+  if (btn) {
+    const original = btn.textContent;
+    btn.textContent = '✓ 已保存';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  }
+}
+
 function ensurePanelDOM() {
   if (panelEl) return;
   panelEl = document.getElementById('settings-panel');
   overlayEl = document.getElementById('settings-overlay');
   closeBtnEl = document.getElementById('settings-close-btn');
   gameListPanelEl = document.getElementById('settings-game-list');
+  globalSettingsEl = document.getElementById('settings-global');
 
   overlayEl.addEventListener('click', closeSettingsPanel);
   closeBtnEl.addEventListener('click', closeSettingsPanel);
@@ -233,6 +286,13 @@ function buildEditFormHTML(game) {
         </div>
       </div>
       <div class="settings-field">
+        <label>游戏安装目录（更新会安装到此目录）</label>
+        <div class="settings-path-row">
+          <input type="text" id="edit-install-dir-${game.id}" value="${escapeAttr(game.installDir || '')}" class="settings-input" readonly placeholder="未设置">
+          <button class="settings-browse-btn" data-target="install-dir-${game.id}">浏览</button>
+        </div>
+      </div>
+      <div class="settings-field">
         <label>游戏图标</label>
         <div class="settings-path-row">
           <input type="text" id="edit-cover-${game.id}" value="${escapeAttr(game.coverPath || '')}" class="settings-input" readonly placeholder="未设置">
@@ -286,6 +346,9 @@ function bindEditEvents(gameId) {
       if (field.startsWith('exe-')) {
         const path = await window.electronAPI.selectExeFile();
         if (path) document.getElementById(`edit-exe-${gameId}`).value = path;
+      } else if (field.startsWith('install-dir-')) {
+        const path = await window.electronAPI.selectFolder();
+        if (path) document.getElementById(`edit-install-dir-${gameId}`).value = path;
       } else if (field.startsWith('cover-')) {
         const path = await window.electronAPI.selectCoverFile();
         if (path) document.getElementById(`edit-cover-${gameId}`).value = path;
@@ -376,6 +439,7 @@ function bindEditEvents(gameId) {
 async function saveGameEdit(gameId) {
   const nameEl = document.getElementById(`edit-name-${gameId}`);
   const exeEl = document.getElementById(`edit-exe-${gameId}`);
+  const installDirEl = document.getElementById(`edit-install-dir-${gameId}`);
   const coverEl = document.getElementById(`edit-cover-${gameId}`);
   const bgEl = document.getElementById(`edit-bg-${gameId}`);
   const videoEl = document.getElementById(`edit-video-${gameId}`);
@@ -384,6 +448,7 @@ async function saveGameEdit(gameId) {
   const updates = {};
   if (nameEl) updates.name = nameEl.value.trim() || '未命名游戏';
   if (exeEl) updates.exePath = exeEl.value.trim();
+  if (installDirEl) updates.installDir = installDirEl.value.trim();
   if (coverEl) updates.coverPath = coverEl.value.trim();
   if (bgEl) updates.backgroundPath = bgEl.value.trim();
   if (videoEl) updates.videoPath = videoEl.value.trim();

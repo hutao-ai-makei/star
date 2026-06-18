@@ -41,6 +41,70 @@ function ensureParent(filePath) {
   }
 }
 
+const BACKUP_META_FILE = '__backup_meta__.json';
+
+/**
+ * Write backup metadata.
+ * @param {string} backupDir
+ * @param {object} meta
+ */
+function writeBackupMeta(backupDir, meta) {
+  fs.writeFileSync(
+    path.join(backupDir, BACKUP_META_FILE),
+    JSON.stringify({ createdAt: Date.now(), ...meta }, null, 2),
+    'utf-8'
+  );
+}
+
+/**
+ * Read backup metadata.
+ * @param {string} backupDir
+ * @returns {object|null}
+ */
+function readBackupMeta(backupDir) {
+  try {
+    const file = path.join(backupDir, BACKUP_META_FILE);
+    if (!fs.existsSync(file)) return null;
+    return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Find all backup directories under installDir/.backup and return them sorted by createdAt desc.
+ * @param {string} installDir
+ * @returns {Array<{dir:string, meta:object}>}
+ */
+function listBackups(installDir) {
+  const base = path.join(installDir, '.backup');
+  if (!fs.existsSync(base)) return [];
+
+  const entries = fs.readdirSync(base, { withFileTypes: true })
+    .filter(e => e.isDirectory())
+    .map(e => {
+      const dir = path.join(base, e.name);
+      return { dir, meta: readBackupMeta(dir) || { createdAt: 0 } };
+    })
+    .sort((a, b) => (b.meta.createdAt || 0) - (a.meta.createdAt || 0));
+
+  return entries;
+}
+
+/**
+ * Keep only the most recent `keep` backups.
+ */
+function cleanupOldBackups(installDir, keep = 3) {
+  const backups = listBackups(installDir);
+  for (let i = keep; i < backups.length; i++) {
+    try {
+      removeDir(backups[i].dir);
+    } catch (err) {
+      console.warn('Failed to remove old backup:', backups[i].dir, err.message);
+    }
+  }
+}
+
 /**
  * Get a list of entries inside a zip file using PowerShell.
  * @param {string} zipPath
@@ -196,10 +260,18 @@ async function installUpdate(task, options = {}) {
     fs.mkdirSync(installDir, { recursive: true });
   }
 
-  const backupDir = path.join(installDir, '.backup', task.id);
+  // Use a timestamped backup directory so rollback can pick the latest one.
+  const backupId = `backup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const backupDir = path.join(installDir, '.backup', backupId);
   if (fs.existsSync(backupDir)) {
     removeDir(backupDir);
   }
+  fs.mkdirSync(backupDir, { recursive: true });
+  task.backupId = backupId;
+  task.backupDir = backupDir;
+
+  // Record the version we are about to overwrite, so rollback can restore it.
+  writeBackupMeta(backupDir, { oldVersion: game.currentVersion || '' });
 
   const allBackupPaths = new Set();
 
@@ -229,10 +301,8 @@ async function installUpdate(task, options = {}) {
       removeDir(cacheDir);
     }
 
-    // Clear backup on success
-    if (fs.existsSync(backupDir)) {
-      removeDir(backupDir);
-    }
+    // Keep successful backup for potential user rollback, but limit retention.
+    cleanupOldBackups(installDir, 3);
   } catch (err) {
     // Rollback on failure
     restoreFiles(backupDir, installDir);
@@ -333,13 +403,13 @@ async function applyHdiffIfPresent(installDir) {
   const hdiffMapPath = path.join(installDir, 'hdiffmap.json');
   const hdiffFilesPath = path.join(installDir, 'hdifffiles.txt');
 
-  if (fs.existsSync(hdiffMapPath)) {
-    // Placeholder: in a full implementation this would call hpatchz for each item.
-    fs.unlinkSync(hdiffMapPath);
-  }
-
-  if (fs.existsSync(hdiffFilesPath)) {
-    fs.unlinkSync(hdiffFilesPath);
+  const hasHdiff = fs.existsSync(hdiffMapPath) || fs.existsSync(hdiffFilesPath);
+  if (hasHdiff) {
+    // Do not silently skip hdiff patches: it would leave the game files incomplete.
+    throw new Error(
+      'This update uses hdiff delta patches, which are not supported yet. ' +
+      'Please use the full package instead of the delta package.'
+    );
   }
 }
 
@@ -348,14 +418,17 @@ async function applyHdiffIfPresent(installDir) {
  */
 async function rollbackUpdate(task) {
   const { installDir } = task;
-  const backupDir = path.join(installDir, '.backup', task.id);
+  const backupDir = task.backupDir || path.join(installDir, '.backup', task.id || '');
 
-  if (!fs.existsSync(backupDir)) {
+  if (!backupDir || !fs.existsSync(backupDir)) {
     throw new Error('No backup available for rollback');
   }
 
+  const meta = readBackupMeta(backupDir);
   restoreFiles(backupDir, installDir);
   removeDir(backupDir);
+
+  return meta?.oldVersion || '';
 }
 
 module.exports = {
@@ -363,6 +436,7 @@ module.exports = {
   rollbackUpdate,
   extractZip,
   listZipEntries,
+  listBackups,
   copyDir,
   removeDir,
 };

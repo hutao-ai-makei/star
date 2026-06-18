@@ -232,20 +232,23 @@ class UpdateTask {
         await this._doDownload();
       }
 
-      // Single-file updates do not need decompression
-      const needsDecompress = this.taskFiles.some(f => f.mode === TaskMode.COMPRESSED_PACKAGE);
+      // Pre-download only fetches files to cache; formal update installs them.
+      if (!this.checkResult.isPreDownload) {
+        // Single-file updates do not need decompression
+        const needsDecompress = this.taskFiles.some(f => f.mode === TaskMode.COMPRESSED_PACKAGE);
 
-      if (needsDecompress) {
-        this._setState(TaskState.DECOMPRESSING);
-        this.progressPercent = 0;
+        if (needsDecompress) {
+          this._setState(TaskState.DECOMPRESSING);
+          this.progressPercent = 0;
+        }
+
+        await installUpdate(this, {
+          onProgress: (percent) => {
+            this.progressPercent = percent;
+            this._emitProgress();
+          },
+        });
       }
-
-      await installUpdate(this, {
-        onProgress: (percent) => {
-          this.progressPercent = percent;
-          this._emitProgress();
-        },
-      });
 
       this._setState(TaskState.FINISH);
 
@@ -335,12 +338,15 @@ class UpdateTask {
    */
   async rollback() {
     this.controller.abort();
-    await rollbackUpdate(this);
+    const oldVersion = await rollbackUpdate(this);
     this._setState(TaskState.STOP);
 
     updateGame(this.gameId, {
-      updateStatus: 'idle',
+      currentVersion: oldVersion || this.game?.currentVersion || '',
       targetVersion: '',
+      updateStatus: 'idle',
+      isPreDownload: false,
+      predownloadInfo: null,
       downloadProgress: { totalBytes: 0, downloadedBytes: 0, speed: 0, chunks: [] },
     });
 
