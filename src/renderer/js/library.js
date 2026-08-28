@@ -12,18 +12,24 @@ function renderLibrary(containerEl, games, selectedId, onSelect) {
     el.className = 'game-icon' + (game.id === selectedId ? ' selected' : '');
     el.title = game.name;
 
-    if (game.coverPath) {
-      const coverUrl = game.coverPath.replace(/\\/g, '/');
-      el.style.backgroundImage = `url(file:///${coverUrl})`;
-    } else if (game.iconPath) {
+    // 图标优先使用 exe 提取的 iconPath；其次自定义 coverPath；最后兜底 emoji
+    if (game.iconPath) {
       const iconUrl = game.iconPath.replace(/\\/g, '/');
       el.style.backgroundImage = `url(file:///${iconUrl})`;
+    } else if (game.coverPath) {
+      const coverUrl = game.coverPath.replace(/\\/g, '/');
+      el.style.backgroundImage = `url(file:///${coverUrl})`;
     } else {
       el.textContent = '🎮';
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.justifyContent = 'center';
-      el.style.fontSize = '18px';
+    }
+
+    // 更新中（下载/暂停/解压/校验等）显示角标
+    const updating = ['downloading', 'pending', 'decompressing', 'merging', 'verifying', 'paused'].includes(game.updateStatus);
+    if (updating) {
+      const dot = document.createElement('span');
+      dot.className = 'badge-dot';
+      dot.title = '有更新可用';
+      el.appendChild(dot);
     }
 
     el.addEventListener('click', () => onSelect(game.id));

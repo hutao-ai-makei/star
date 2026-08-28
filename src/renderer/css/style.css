@@ -1,14 +1,24 @@
-/* === CSS Variables === */
+/* === Star Launcher · 设计令牌（玻璃拟态 · 浅色版） === */
 :root {
-  --accent: #667eea;
-  --accent-glow: rgba(102, 126, 234, 0.55);
-  --accent-bg: rgba(102, 126, 234, 0.2);
   --text: #2D2B55;
   --text-light: rgba(45, 43, 85, 0.55);
-  --glass: rgba(255, 255, 255, 0.35);
-  --glass-hover: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.45);
-  --sidebar-width: 68px;
+  --text-faint: rgba(45, 43, 85, 0.35);
+  --accent: #667eea;
+  --accent-deep: #764ba2;
+  --accent-glow: rgba(102, 126, 234, 0.55);
+  --accent-bg: rgba(102, 126, 234, 0.2);
+  --success: #22b07d;
+  --warning: #f59e0b;
+  --danger: #e5484d;
+
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-hover: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-shadow: rgba(45, 43, 85, 0.08);
+  --glass-dark: rgba(20, 16, 48, 0.28);
+  --glass-dark-border: rgba(255, 255, 255, 0.22);
+
+  --sidebar-width: 88px;
   --font-family: 'Inter', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
 }
 
@@ -23,6 +33,24 @@ html, body {
   color: var(--text);
   background: linear-gradient(135deg, #E8E0F0 0%, #D4E4F7 30%, #C8E6F5 60%, #E0D8F0 100%);
   user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 装饰光斑：让毛玻璃有内容可透 */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  width: 340px; height: 340px; top: -80px; right: 12%;
+  background: radial-gradient(circle, rgba(102,126,234,0.22), transparent 70%);
+}
+body::after {
+  width: 260px; height: 260px; bottom: -60px; left: 30%;
+  background: radial-gradient(circle, rgba(118,75,162,0.18), transparent 70%);
 }
 
 /* === Layout === */
@@ -30,6 +58,8 @@ html, body {
   display: flex;
   width: 100%;
   height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 
 /* === Sidebar === */
@@ -40,14 +70,25 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 8px;
+  padding: 16px 8px;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.32);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-right: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 2px 0 24px rgba(0, 0, 0, 0.08), inset -1px 0 0 rgba(255, 255, 255, 0.1);
-  -webkit-app-region: no-drag;
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 2px 0 24px rgba(45, 43, 85, 0.08), inset -1px 0 0 rgba(255, 255, 255, 0.3);
+}
+
+#logo {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  background: linear-gradient(135deg, rgba(102,126,234,0.25), rgba(118,75,162,0.18));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 14px rgba(102,126,234,0.18);
+  margin-bottom: 4px;
+  cursor: default;
 }
 
 #game-list {
@@ -55,248 +96,88 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   overflow-y: auto;
   width: 100%;
+  scroll-behavior: smooth;
 }
-
 #game-list::-webkit-scrollbar { width: 0; }
 
 .game-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
   flex-shrink: 0;
   background-size: cover;
   background-position: center;
-  cursor: pointer;
-  transition: transform 0.15s, opacity 0.15s, box-shadow 0.15s;
-  opacity: 0.55;
   background-color: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(45,43,85,0.15);
 }
-
-.game-icon:hover { opacity: 0.8; transform: scale(1.05); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1); }
+.game-icon:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 20px rgba(45,43,85,0.22); }
 
 .game-icon.selected {
-  opacity: 1;
-  outline: 2px solid var(--accent-glow);
-  outline-offset: 2px;
-  background-color: var(--accent-bg);
-  border-color: rgba(102, 126, 234, 0.4);
+  border-color: rgba(255, 255, 255, 0.9);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent), 0 8px 20px rgba(102,126,234,0.35);
+  transform: scale(1.06);
 }
-
-/* === Update Panel === */
-#update-panel {
+/* 选中态左侧指示条 */
+.game-icon.selected::before {
+  content: '';
   position: absolute;
-  bottom: 90px;
-  left: 16px;
-  right: 16px;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-  background: var(--glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: none;
-  border-radius: 12px;
-  padding: 0 18px;
-  z-index: 5;
+  left: -19px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px; height: 26px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
 }
-
-#update-panel.visible {
-  max-height: 300px;
-  border: 1px solid var(--glass-border);
-  padding: 16px 18px;
-}
-
-#update-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 10px;
-}
-
-#update-body {
-  font-size: 12px;
-  color: var(--text-light);
-  line-height: 1.6;
-}
-
-.update-version-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.update-arrow {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.update-new-ver {
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.update-log {
-  font-size: 12px;
-  color: var(--text-light);
-  margin-bottom: 8px;
-  max-height: 60px;
-  overflow-y: auto;
-  white-space: pre-line;
-}
-
-.update-size {
-  font-size: 12px;
-  color: var(--text-light);
-  margin-bottom: 10px;
-}
-
-.update-done-message {
-  font-size: 13px;
-  color: var(--text);
-  margin-bottom: 10px;
-}
-
-.update-error-message {
-  font-size: 13px;
-  color: #e74c3c;
-  margin-bottom: 10px;
-}
-
-.update-force-hint {
-  font-size: 11px;
-  color: #e74c3c;
-  margin-top: 6px;
-}
-
-#update-progress-bar {
-  display: none;
-}
-
-.update-progress-container {
-  position: relative;
-  height: 8px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 4px;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-
-.update-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.update-progress-bar.update-progress-indeterminate {
-  width: 40%;
-  animation: update-indeterminate 1.2s infinite ease-in-out;
-}
-
-@keyframes update-indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
-}
-
-.update-progress-text {
+/* 更新中角标 */
+.game-icon .badge-dot {
   position: absolute;
-  right: 0;
-  top: -18px;
-  font-size: 11px;
-  color: var(--text-light);
+  top: -3px; right: -3px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--warning);
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 2px 6px rgba(245,158,11,0.5);
 }
 
-.update-progress-stats,
-.update-progress-speed {
-  font-size: 11px;
-  color: var(--text-light);
-  margin-bottom: 4px;
-}
-
-/* Update action buttons */
-#update-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.update-btn {
-  padding: 7px 14px;
-  border-radius: 8px;
-  border: none;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: var(--font-family);
-}
-
-.update-btn-primary {
-  background: var(--accent);
-  color: #fff;
-}
-
-.update-btn-primary:hover {
-  background: #5a6fd6;
-  box-shadow: 0 2px 8px var(--accent-glow);
-}
-
-.update-btn-secondary {
-  background: rgba(102,126,234,0.15);
-  color: var(--accent);
-  border: 1px solid rgba(102,126,234,0.3);
-}
-
-.update-btn-secondary:hover {
-  background: rgba(102,126,234,0.25);
-}
-
-.update-btn-skip {
-  background: transparent;
-  color: var(--text-light);
-  border: 1px solid rgba(0,0,0,0.1);
-}
-
-.update-btn-skip:hover {
-  background: rgba(0,0,0,0.05);
-  color: var(--text);
-}
-
-/* === Sidebar Divider === */
 #sidebar-divider {
-  width: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  width: 32px;
+  border-top: 1px solid rgba(45, 43, 85, 0.12);
   margin: 4px 0;
 }
 
-/* === Add Button === */
-#add-game-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+#add-game-btn, #settings-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   border: none;
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--accent);
-  font-size: 20px;
-  font-weight: 400;
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 3px 10px var(--glass-shadow);
+  color: var(--text-light);
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
 }
-
-#add-game-btn:hover { background: rgba(255, 255, 255, 0.4); }
+#add-game-btn { border-style: dashed; border-color: rgba(45,43,85,0.25); background: rgba(255,255,255,0.35); font-size: 22px; font-weight: 300; }
+#settings-btn { margin-top: auto; font-size: 16px; }
+#add-game-btn:hover, #settings-btn:hover { background: var(--glass-hover); color: var(--accent); transform: translateY(-1px); }
 
 /* === Main Content === */
 #main-content {
@@ -304,51 +185,326 @@ html, body {
   height: 100vh;
   position: relative;
   overflow: hidden;
+  border-radius: 24px 0 0 0;
+  margin: 0;
 }
 
 /* === Title Bar === */
 #title-bar {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 36px;
+  top: 0; left: 0; right: 0;
+  height: 46px;
   display: flex;
-  justify-content: flex-end;
   align-items: center;
-  padding: 0 8px;
-  z-index: 10;
+  justify-content: space-between;
+  padding: 0 12px 0 20px;
+  z-index: 20;
   -webkit-app-region: drag;
 }
+.crumb {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 6px rgba(20,16,48,0.4);
+  display: flex; align-items: center; gap: 6px;
+}
+.crumb-sub { font-weight: 400; opacity: 0.6; }
 
+#title-btns { display: flex; gap: 6px; -webkit-app-region: no-drag; }
 .title-btn {
-  width: 46px;
-  height: 32px;
-  border-radius: 0;
+  width: 34px; height: 26px;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
   -webkit-app-region: no-drag;
   background: transparent;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex; align-items: center; justify-content: center;
   transition: background 0.15s;
 }
+.title-btn:hover { background: rgba(255, 255, 255, 0.22); }
+.title-btn-close:hover { background: var(--danger); color: #fff; }
 
-.title-btn:hover { background: rgba(0, 0, 0, 0.06); }
-
-.title-btn-close:hover {
-  background: #E81123;
-  color: #fff;
-}
-
-/* === Cover Area === */
+/* === Cover Area / Hero === */
 #cover-area {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center;
+  background-color: #1a3a5c;
+  display: block;
+  overflow: hidden;
+}
+
+/* 媒体指示点 */
+#media-dots {
+  position: absolute;
+  right: 32px;
+  bottom: 130px;
+  display: flex;
+  gap: 6px;
+  z-index: 12;
+}
+#media-dots .dot {
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: width 0.28s ease, background 0.28s ease;
+}
+#media-dots .dot.active { width: 18px; background: #fff; }
+
+/* === Media Arrows === */
+.media-arrow {
+  position: absolute;
+  top: 42%;
+  transform: translateY(-50%);
+  z-index: 15;
+  width: 42px; height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: var(--glass-dark);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-dark-border);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, opacity 0.2s, transform 0.2s;
+  opacity: 0;
+  -webkit-app-region: no-drag;
+}
+#media-arrow-left  { left: 16px; }
+#media-arrow-right { right: 16px; }
+#cover-area:hover .media-arrow { opacity: 1; }
+.media-arrow:hover { background: rgba(20,16,48,0.45); transform: translateY(-50%) scale(1.08); }
+
+/* === Update Panel (浮动玻璃卡片) === */
+#update-panel {
+  position: absolute;
+  top: 60px;
+  right: 24px;
+  width: 320px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out;
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: none;
+  border-radius: 18px;
+  padding: 0 18px;
+  z-index: 18;
+  box-shadow: 0 12px 36px rgba(45,43,85,0.18);
+}
+#update-panel.visible {
+  max-height: 420px;
+  opacity: 1;
+  border: 1px solid var(--glass-border);
+  padding: 16px 18px;
+}
+#update-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+#update-body { font-size: 12px; color: var(--text-light); line-height: 1.6; }
+.update-version-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; color: var(--text); flex-wrap: wrap; }
+.update-arrow { color: var(--accent); font-weight: 700; }
+.update-new-ver { color: var(--accent); font-weight: 600; }
+.update-log { font-size: 12px; color: var(--text-light); margin-bottom: 8px; max-height: 60px; overflow-y: auto; white-space: pre-line; }
+.update-size { font-size: 12px; color: var(--text-light); margin-bottom: 10px; }
+.update-done-message { font-size: 13px; color: var(--text); margin-bottom: 10px; }
+.update-error-message { font-size: 13px; color: var(--danger); margin-bottom: 10px; }
+.update-force-hint { font-size: 11px; color: var(--danger); margin-top: 6px; }
+.update-progress-container { position: relative; height: 8px; background: rgba(255,255,255,0.7); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
+.update-progress-bar { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px; transition: width 0.3s ease; }
+.update-progress-bar.update-progress-indeterminate { width: 40%; animation: update-indeterminate 1.2s infinite ease-in-out; }
+@keyframes update-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+.update-progress-text { position: absolute; right: 0; top: -18px; font-size: 11px; color: var(--text-light); }
+.update-progress-stats, .update-progress-speed { font-size: 11px; color: var(--text-light); margin-bottom: 4px; }
+#update-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.update-btn { padding: 7px 14px; border-radius: 8px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--font-family); }
+.update-btn-primary { background: var(--accent); color: #fff; }
+.update-btn-primary:hover { background: #5a6fd6; box-shadow: 0 2px 8px var(--accent-glow); }
+.update-btn-secondary { background: rgba(102,126,234,0.15); color: var(--accent); border: 1px solid rgba(102,126,234,0.3); }
+.update-btn-secondary:hover { background: rgba(102,126,234,0.25); }
+.update-btn-skip { background: transparent; color: var(--text-light); border: 1px solid rgba(0,0,0,0.1); }
+.update-btn-skip:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+
+/* === Empty State === */
+#empty-state {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  pointer-events: none;
+  text-shadow: 0 2px 12px rgba(20,16,48,0.5);
+  z-index: 5;
 }
+
+/* ============================================================
+   Settings Panel（结构 / 表单类，玻璃质感在 glass.css）
+   ============================================================ */
+#settings-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(45, 43, 85, 0.18);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+#settings-panel {
+  position: absolute;
+  z-index: 40; /* 必须高于 #settings-overlay(30)，否则面板被毛玻璃遮罩盖住无法操作 */
+  top: 24px; right: 24px; bottom: 24px;
+  width: 620px;
+  max-width: calc(100vw - 140px);
+  background: rgba(248, 248, 255, 0.82);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(45, 43, 85, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(calc(100% + 40px));
+  transition: transform 0.28s cubic-bezier(.4, 0, .2, 1);
+}
+#settings-panel.open { transform: translateX(0); }
+#settings-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px;
+  font-size: 17px; font-weight: 800; color: var(--text);
+  border-bottom: 1px solid rgba(45, 43, 85, 0.08);
+  flex-shrink: 0;
+}
+#settings-close-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-light); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+#settings-close-btn:hover { background: var(--glass-hover); color: var(--text); }
+#settings-body { display: flex; flex: 1; overflow: hidden; }
+#settings-sidebar {
+  flex-shrink: 0;
+  width: 200px; min-width: 140px; max-width: 320px;
+  background: transparent;
+  border-right: 1px solid rgba(45, 43, 85, 0.08);
+  padding: 16px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  overflow-y: auto;
+}
+.settings-category {
+  padding: 10px 14px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; color: var(--text-light);
+  cursor: pointer; transition: background 0.15s, color 0.15s; user-select: none;
+}
+.settings-category:hover { background: rgba(255, 255, 255, 0.5); color: var(--text); }
+.settings-category.active { background: linear-gradient(135deg, rgba(102,126,234,0.16), rgba(118,75,162,0.10)); color: #5A6AE0; box-shadow: inset 0 0 0 1px rgba(102,126,234,0.25); }
+#settings-resizer { width: 6px; flex-shrink: 0; cursor: col-resize; background: transparent; transition: background 0.15s; }
+#settings-resizer:hover, #settings-resizer.resizing { background: rgba(102, 126, 234, 0.35); }
+#settings-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+#settings-content > div { flex: 1; overflow-y: auto; padding: 16px 24px 24px; }
+#settings-content > div::-webkit-scrollbar { width: 4px; }
+#settings-content > div::-webkit-scrollbar-thumb { background: rgba(102,126,234,0.25); border-radius: 2px; }
+#settings-game-list { display: flex; flex-direction: column; }
+
+/* 游戏项 */
+.settings-game-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; cursor: pointer; transition: background 0.15s; }
+.settings-game-item:hover { background: rgba(255, 255, 255, 0.55); }
+.settings-game-item.expanded { background: rgba(102, 126, 234, 0.08); border-radius: 14px 14px 0 0; }
+.settings-game-cover {
+  width: 44px; height: 44px; border-radius: 12px;
+  background-size: cover; background-position: center; flex-shrink: 0;
+  background-color: rgba(45,43,85,0.06);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.settings-game-info { flex: 1; min-width: 0; }
+.settings-game-name { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.settings-game-meta { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+.settings-expand-hint { font-size: 11px; color: var(--text-light); opacity: 0.5; transition: opacity 0.15s; white-space: nowrap; }
+.settings-game-item:hover .settings-expand-hint { opacity: 1; }
+.settings-drag-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 40px; cursor: grab; color: var(--text-light);
+  font-size: 14px; line-height: 1; letter-spacing: -2px; opacity: 0.4;
+  transition: opacity 0.15s, color 0.15s; flex-shrink: 0; user-select: none;
+}
+.settings-game-item:hover .settings-drag-handle { opacity: 0.8; color: var(--text); }
+.settings-drag-handle:active { cursor: grabbing; }
+.settings-game-item.dragging { opacity: 0.4; background: rgba(102, 126, 234, 0.15); }
+.settings-game-item.drop-above { border-top: 2px solid rgba(102, 126, 234, 0.8); }
+.settings-game-item.drop-below { border-bottom: 2px solid rgba(102, 126, 234, 0.8); }
+.settings-edit-area { background: rgba(102, 126, 234, 0.05); border-radius: 0 0 14px 14px; margin-bottom: 8px; }
+.settings-edit-form { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* 表单控件 */
+.settings-field { display: flex; flex-direction: column; gap: 4px; }
+.settings-section-title { font-size: 12px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.1em; margin: 8px 0 4px; }
+.settings-global-section, .settings-download-section { padding: 16px; background: rgba(255, 255, 255, 0.45); border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.6); }
+.settings-field label { font-size: 11px; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+.settings-input {
+  padding: 8px 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7); font-size: 13px; font-family: var(--font-family);
+  color: var(--text); outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.settings-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-bg); }
+.settings-input::placeholder { color: rgba(45, 43, 85, 0.3); }
+.settings-input[readonly] { background: rgba(0,0,0,0.03); color: var(--text-light); cursor: default; }
+.settings-path-row { display: flex; gap: 8px; }
+.settings-path-row .settings-input { flex: 1; }
+.settings-browse-btn {
+  padding: 8px 14px; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6); color: var(--accent); font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.15s;
+}
+.settings-browse-btn:hover { background: rgba(255, 255, 255, 0.9); }
+.settings-scan-btn {
+  padding: 8px 12px; border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 10px;
+  background: rgba(102, 126, 234, 0.08); color: var(--accent); font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.15s;
+}
+.settings-scan-btn:hover { background: rgba(102, 126, 234, 0.18); }
+.settings-icon-btn {
+  padding: 8px 12px; border: 1px solid rgba(102, 126, 234, 0.15); border-radius: 10px;
+  background: rgba(102, 126, 234, 0.06); color: var(--accent); font-size: 11px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.15s;
+}
+.settings-icon-btn:hover { background: rgba(102, 126, 234, 0.15); }
+.settings-stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--text-light); }
+.settings-edit-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px; }
+.settings-save-btn { padding: 8px 20px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.settings-save-btn:hover { background: #5a6fd6; transform: scale(1.02); }
+.settings-delete-btn { padding: 8px 16px; border: 1px solid rgba(229, 72, 77, 0.2); border-radius: 10px; background: transparent; color: var(--danger); font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.settings-delete-btn:hover { background: rgba(229, 72, 77, 0.08); border-color: rgba(229, 72, 77, 0.4); }
+
+/* 评分星星（保留） */
+.settings-rating { display: flex; gap: 2px; }
+.rating-star { font-size: 22px; color: rgba(0,0,0,0.15); cursor: pointer; transition: color 0.1s, transform 0.1s; line-height: 1; }
+.rating-star:hover { transform: scale(1.2); }
+.rating-star.active { color: #ffb300; }
+
+/* add-game 弹窗项（保留） */
+.exe-pick-item {
+  padding: 10px 14px; border-radius: 8px; cursor: pointer; margin-bottom: 6px;
+  transition: background 0.15s; color: var(--text); font-size: 13px;
+}
+
+/* 设置游戏行的快捷按钮（更换封面 / 重取图标） */
+.settings-game-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.s-quick-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-light); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.s-quick-btn:hover { background: rgba(102, 126, 234, 0.12); color: var(--accent); transform: translateY(-1px); }

@@ -3,18 +3,27 @@ const path = require('path');
 const crypto = require('crypto');
 const { app } = require('electron');
 
-const DATA_DIR = path.join(app.getPath('userData'), 'data');
-const LIBRARY_FILE = path.join(DATA_DIR, 'library.json');
+// 惰性获取 library 文件路径（避免在 app 未就绪时过早调用 app.getPath）
+let _libraryFile = null;
+function getLibraryFile() {
+  if (!_libraryFile) {
+    const dataDir = path.join(app.getPath('userData'), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    _libraryFile = path.join(dataDir, 'library.json');
+  }
+  return _libraryFile;
+}
 
 // 确保数据目录存在
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
+  getLibraryFile();
 }
 
 // 读取数据
 function readData() {
+  const LIBRARY_FILE = getLibraryFile();
   ensureDataDir();
   if (!fs.existsSync(LIBRARY_FILE)) {
     const defaults = {
@@ -45,6 +54,7 @@ function readData() {
 
 // 写入数据
 function writeData(data) {
+  const LIBRARY_FILE = getLibraryFile();
   ensureDataDir();
   fs.writeFileSync(LIBRARY_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }

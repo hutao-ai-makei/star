@@ -10,52 +10,83 @@
 </head>
 <body>
   <div id="app">
-    <!-- 左侧图标栏 -->
+    <!-- 左侧导航栏 -->
     <aside id="sidebar">
+      <div id="logo" title="Star Launcher">⭐</div>
       <div id="game-list"></div>
       <div id="sidebar-divider"></div>
-      <button id="add-game-btn" title="添加游戏">+</button>
-      <button id="settings-btn" title="游戏管理">⚙</button>
+      <button id="add-game-btn" title="添加游戏" aria-label="添加游戏">+</button>
+      <button id="settings-btn" title="设置" aria-label="设置">⚙</button>
     </aside>
 
-    <!-- 右侧封面区 -->
+    <!-- 右侧主区域 -->
     <main id="main-content">
-      <!-- 标题栏 -->
-      <div id="title-bar">
-        <button class="title-btn" id="btn-minimize" title="最小化"><svg width="10" height="10" viewBox="0 0 10 10"><rect y="4" width="10" height="1" fill="currentColor"/></svg></button>
-        <button class="title-btn" id="btn-maximize" title="最大化"><svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg></button>
-        <button class="title-btn title-btn-close" id="btn-close" title="关闭"><svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"/></svg></button>
-      </div>
-
-      <!-- 封面背景 -->
+      <!-- 封面 / Hero 背景（由 detail.js 写入 background） -->
       <div id="cover-area">
-        <!-- 左右切换箭头 -->
-        <button id="media-arrow-left" class="media-arrow" title="上一个">◀</button>
-        <button id="media-arrow-right" class="media-arrow" title="下一个">▶</button>
-        <div id="game-info">
-          <div id="game-name"></div>
-          <div id="game-last-played"></div>
+        <div id="hero-scrim"></div>
+
+        <!-- 标题栏 -->
+        <div id="title-bar">
+          <div class="crumb">⭐ Star Launcher <span class="crumb-sub">/ 游戏库</span></div>
+          <div id="title-btns">
+            <button class="title-btn" id="btn-minimize" title="最小化" aria-label="最小化"><svg width="10" height="10" viewBox="0 0 10 10"><rect y="4" width="10" height="1.2" fill="currentColor"/></svg></button>
+            <button class="title-btn" id="btn-maximize" title="最大化" aria-label="最大化"><svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.75" y="0.75" width="8.5" height="8.5" fill="none" stroke="currentColor" stroke-width="1.1"/></svg></button>
+            <button class="title-btn title-btn-close" id="btn-close" title="关闭" aria-label="关闭"><svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"/></svg></button>
+          </div>
         </div>
-        <!-- 更新面板 -->
+
+        <!-- 媒体切换箭头 -->
+        <button id="media-arrow-left" class="media-arrow" title="上一张" aria-label="上一张">◀</button>
+        <button id="media-arrow-right" class="media-arrow" title="下一张" aria-label="下一张">▶</button>
+        <div id="media-dots"></div>
+
+        <!-- 游戏信息 -->
+        <div id="hero-info">
+          <div id="game-status-row">
+            <span class="status-chip" id="status-chip"><span class="led"></span><span id="status-text">已安装</span></span>
+            <span class="status-chip" id="version-chip">v0.0</span>
+          </div>
+          <h1 id="game-name"></h1>
+          <div id="game-name-en"></div>
+          <div id="game-meta">
+            <div class="meta-item">
+              <div class="meta-label">上次游玩</div>
+              <div class="meta-value" id="meta-last">从未游玩</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">总时长</div>
+              <div class="meta-value" id="meta-hours">尚未游玩</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主操作 -->
+        <div id="hero-actions">
+          <button class="action-btn" id="detail-btn" title="游戏详情" aria-label="游戏详情">ⓘ</button>
+          <button class="action-btn" id="folder-btn" title="打开安装目录" aria-label="打开安装目录">📁</button>
+          <button id="launch-btn"><span id="launch-icon">▶</span><span id="launch-text">启动游戏</span></button>
+        </div>
+
+        <!-- 更新面板（浮层卡片，由 update-panel.js 控制） -->
         <div id="update-panel">
           <div id="update-title"></div>
           <div id="update-body"></div>
-          <div id="update-progress-bar"></div>
           <div id="update-actions"></div>
         </div>
-        <button id="launch-btn">▶ 启动游戏</button>
+
         <div id="empty-state">
           <div style="font-size:48px;margin-bottom:12px;">🎮</div>
           <div>还没有游戏</div>
           <div style="font-size:13px;margin-top:6px;opacity:0.6;">点击左侧 + 添加</div>
         </div>
       </div>
+
       <!-- 设置面板遮罩层 -->
       <div id="settings-overlay" style="display:none;"></div>
       <div id="settings-panel" style="display:none;">
         <div id="settings-header">
           <span>⚙ 设置</span>
-          <button id="settings-close-btn" title="关闭">✕</button>
+          <button id="settings-close-btn" title="关闭" aria-label="关闭设置">✕</button>
         </div>
         <div id="settings-body">
           <div id="settings-sidebar">

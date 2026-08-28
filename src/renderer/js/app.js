@@ -5,8 +5,13 @@ let selectedGameId = null;
 // === DOM refs ===
 const gameListEl = document.getElementById('game-list');
 const gameNameEl = document.getElementById('game-name');
-const lastPlayedEl = document.getElementById('game-last-played');
+const metaLastEl = document.getElementById('meta-last');
+const metaHoursEl = document.getElementById('meta-hours');
+const versionChipEl = document.getElementById('version-chip');
+const statusTextEl = document.getElementById('status-text');
 const launchBtn = document.getElementById('launch-btn');
+const launchIcon = document.getElementById('launch-icon');
+const launchText = document.getElementById('launch-text');
 const addGameBtn = document.getElementById('add-game-btn');
 const emptyStateEl = document.getElementById('empty-state');
 const coverArea = document.getElementById('cover-area');
@@ -20,6 +25,7 @@ async function init() {
   bindAddButton();
   bindGameEvents();
   UpdatePanel.init();
+  bindActionButtons();
 }
 
 async function loadGames() {
@@ -31,7 +37,10 @@ function renderAll() {
   if (games.length === 0) {
     gameListEl.innerHTML = '';
     gameNameEl.textContent = '';
-    lastPlayedEl.textContent = '';
+    metaLastEl.textContent = '从未游玩';
+    metaHoursEl.textContent = '尚未游玩';
+    versionChipEl.textContent = '';
+    statusTextEl.textContent = '未安装';
     coverArea.style.backgroundImage = '';
     coverArea.style.background = 'linear-gradient(135deg, #2D1B69 0%, #1a3a5c 40%, #0d2137 100%)';
     launchBtn.style.display = 'none';
@@ -43,7 +52,6 @@ function renderAll() {
   emptyStateEl.style.display = 'none';
   launchBtn.style.display = '';
 
-  // 如果没有选中但有游戏，选第一个
   if (!selectedGameId || !games.find(g => g.id === selectedGameId)) {
     selectedGameId = games[0].id;
   }
@@ -53,7 +61,6 @@ function renderAll() {
 
   window._currentGame = games.find(g => g.id === selectedGameId);
 
-  // Refresh update panel state for selected game
   const selGame = games.find(g => g.id === selectedGameId);
   if (selGame) {
     if (selGame.updateStatus === 'downloading') {
@@ -98,7 +105,6 @@ function bindLaunchButton() {
     const game = games.find(g => g.id === selectedGameId);
     window._currentGame = game;
 
-    // First, check for updates
     if (game.packageId) {
       try {
         const check = await window.electronAPI.checkUpdate(selectedGameId);
@@ -114,13 +120,36 @@ function bindLaunchButton() {
         }
       } catch (err) {
         console.error('Update check failed:', err);
-        // Fall through to normal launch
       }
     }
 
-    // No update — launch directly
     doLaunch(selectedGameId);
   });
+}
+
+/**
+ * 详情 / 打开目录 按钮
+ */
+function bindActionButtons() {
+  const detailBtn = document.getElementById('detail-btn');
+  const folderBtn = document.getElementById('folder-btn');
+  if (detailBtn) {
+    detailBtn.addEventListener('click', () => {
+      openSettingsPanel(games, async () => {
+        games = await window.electronAPI.getGames();
+        selectedGameId = games.length > 0 ? games[0].id : null;
+        renderAll();
+      });
+    });
+  }
+  if (folderBtn) {
+    folderBtn.addEventListener('click', async () => {
+      const game = games.find(g => g.id === selectedGameId);
+      if (!game || !game.exePath) return;
+      const dir = game.installDir || game.exePath.split(/[\\/]/).slice(0, -1).join('\\');
+      await window.electronAPI.openPath(dir);
+    });
+  }
 }
 
 /**
@@ -129,24 +158,14 @@ function bindLaunchButton() {
 async function doLaunch(gameId) {
   const result = await window.electronAPI.launchGame(gameId);
   if (!result.success) {
-    const game = games.find(g => g.id === gameId);
-    if (result.needsUpdate) {
-      // Update panel already showing, do nothing extra
-      return;
-    }
-    if (result.error && result.error.includes('找不到')) {
-      gameNameEl.textContent = (game?.name || '') + ' — 文件丢失';
-      lastPlayedEl.textContent = '找不到可执行文件，请重新定位';
-    } else if (!result.error.includes('已在运行')) {
-      alert('启动失败：' + result.error);
-    }
+    if (result.needsUpdate) return;
+    alert('启动失败：' + (result.error || '未知错误'));
   }
 }
 
 function bindAddButton() {
   addGameBtn.addEventListener('click', openAddGameDialog);
 
-  // Settings button
   const settingsBtn = document.getElementById('settings-btn');
   settingsBtn.addEventListener('click', () => {
     openSettingsPanel(games, async () => {
@@ -159,14 +178,16 @@ function bindAddButton() {
 
 function bindGameEvents() {
   window.electronAPI.onGameRunning(({ id }) => {
-    launchBtn.textContent = '● 运行中';
+    launchIcon.textContent = '■';
+    launchText.textContent = '停止';
     launchBtn.classList.add('running');
   });
 
   window.electronAPI.onGameExited(async ({ id }) => {
-    launchBtn.textContent = '▶ 启动游戏';
+    launchIcon.textContent = '▶';
+    launchText.textContent = '启动游戏';
     launchBtn.classList.remove('running');
-    await loadGames(); // 刷新时长数据
+    await loadGames();
   });
 }
 

@@ -29,6 +29,8 @@ async function openSettingsPanel(games, onClose) {
   ensurePanelDOM();
   overlayEl.style.display = '';
   panelEl.style.display = '';
+  // 下一帧再加 .open，确保滑入过渡生效
+  requestAnimationFrame(() => panelEl.classList.add('open'));
 
   loadSettingsState();
   applySidebarWidth();
@@ -37,9 +39,12 @@ async function openSettingsPanel(games, onClose) {
 }
 
 function closeSettingsPanel() {
-  if (overlayEl) overlayEl.style.display = 'none';
-  if (panelEl) panelEl.style.display = 'none';
+  if (panelEl) panelEl.classList.remove('open');
   if (onSettingsClose) onSettingsClose();
+  setTimeout(() => {
+    if (overlayEl) overlayEl.style.display = 'none';
+    if (panelEl) panelEl.style.display = 'none';
+  }, 300);
 }
 
 function loadSettingsState() {
@@ -184,6 +189,9 @@ function ensurePanelDOM() {
 
   overlayEl.addEventListener('click', closeSettingsPanel);
   closeBtnEl.addEventListener('click', closeSettingsPanel);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && panelEl.style.display !== 'none') closeSettingsPanel();
+  });
 
   sidebarEl.addEventListener('click', (e) => {
     const cat = e.target.closest('.settings-category')?.dataset.category;
@@ -240,7 +248,11 @@ function renderSettingsGames() {
     // 操作按钮
     const actions = document.createElement('div');
     actions.className = 'settings-game-actions';
-    actions.innerHTML = `<span class="settings-expand-hint">编辑 ▸</span>`;
+    actions.innerHTML = `
+      <button class="s-quick-btn" data-act="cover" title="更换封面图（16:9）" aria-label="更换 ${escapeHTML(game.name)} 封面">🖼</button>
+      <button class="s-quick-btn" data-act="icon" title="重新提取 exe 图标" aria-label="重新提取 ${escapeHTML(game.name)} 图标">⟳</button>
+      <span class="settings-expand-hint">编辑 ▸</span>
+    `;
 
     item.appendChild(dragHandle);
     item.appendChild(cover);
@@ -254,9 +266,32 @@ function renderSettingsGames() {
     item.addEventListener('drop', handleDrop);
     item.addEventListener('dragend', handleDragEnd);
 
+    // 快捷按钮：更换封面 / 重新提取 exe 图标
+    actions.querySelector('[data-act="cover"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const p = await window.electronAPI.selectBackgroundFile();
+      if (!p) return;
+      await window.electronAPI.updateGame(game.id, { backgroundPath: p });
+      const idx = settingsGames.findIndex(g => g.id === game.id);
+      if (idx !== -1) settingsGames[idx].backgroundPath = p;
+      renderSettingsGames();
+    });
+    actions.querySelector('[data-act="icon"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const iconPath = await window.electronAPI.extractExeIcon(game.id, game.exePath);
+      if (iconPath) {
+        await window.electronAPI.updateGame(game.id, { iconPath });
+        const idx = settingsGames.findIndex(g => g.id === game.id);
+        if (idx !== -1) settingsGames[idx].iconPath = iconPath;
+        renderSettingsGames();
+      } else {
+        alert('图标提取失败');
+      }
+    });
+
     // 点击展开/折叠
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.settings-delete-btn') || e.target.closest('.settings-browse-btn') || e.target.closest('.settings-scan-btn') || e.target.closest('.settings-drag-handle')) return;
+      if (e.target.closest('.settings-delete-btn') || e.target.closest('.settings-browse-btn') || e.target.closest('.settings-scan-btn') || e.target.closest('.settings-drag-handle') || e.target.closest('.s-quick-btn')) return;
       if (expandedGameId === game.id) {
         expandedGameId = null;
       } else {
@@ -390,7 +425,7 @@ function buildEditFormHTML(game) {
         </div>
       </div>
       <div class="settings-field">
-        <label>游戏图标</label>
+        <label>自定义图标（可选，留空则用 exe 图标）</label>
         <div class="settings-path-row">
           <input type="text" id="edit-cover-${game.id}" value="${escapeAttr(game.coverPath || '')}" class="settings-input" readonly placeholder="未设置">
           <button class="settings-browse-btn" data-target="cover-${game.id}" data-game-id="${game.id}">浏览</button>
@@ -398,7 +433,7 @@ function buildEditFormHTML(game) {
         </div>
       </div>
       <div class="settings-field">
-        <label>游戏背景</label>
+        <label>封面图（16:9）</label>
         <div class="settings-path-row">
           <input type="text" id="edit-bg-${game.id}" value="${escapeAttr(game.backgroundPath || '')}" class="settings-input" readonly placeholder="未设置">
           <button class="settings-browse-btn" data-target="bg-${game.id}">浏览</button>

@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Launcher · 界面重设计 V1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     Star Launcher 设计令牌（延续品牌：玻璃拟态 · 浅色版）
+     ============================================================ */
+  :root {
+    /* 色彩 */
+    --text: #2D2B55;
+    --text-light: rgba(45, 43, 85, 0.55);
+    --text-faint: rgba(45, 43, 85, 0.35);
+    --accent: #667eea;
+    --accent-deep: #764ba2;
+    --success: #22b07d;
+    --warning: #f59e0b;
+    --danger: #e5484d;
+
+    /* 玻璃材质 */
+    --glass: rgba(255, 255, 255, 0.55);
+    --glass-hover: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.65);
+    --glass-shadow: rgba(45, 43, 85, 0.08);
+    --glass-dark: rgba(20, 16, 48, 0.28);        /* 封面上的深色玻璃 */
+    --glass-dark-border: rgba(255, 255, 255, 0.22);
+
+    /* 间距（4px 基准） */
+    --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+    --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+
+    /* 圆角 */
+    --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 24px;
+
+    /* 动效 */
+    --t-fast: 150ms ease;
+    --t-normal: 280ms cubic-bezier(.4, 0, .2, 1);
+
+    /* 窗口背景 */
+    --bg: linear-gradient(135deg, #E8E0F0 0%, #D4E4F7 30%, #C8E6F5 60%, #E0D8F0 100%);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    display: flex;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+  }
+  button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ============================================================
+     整体布局：左侧导航栏 + 右侧主区域
+     ============================================================ */
+  #app {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* 装饰光斑（让毛玻璃有东西可透） */
+  .bg-orb {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .bg-orb.one {
+    width: 340px; height: 340px; top: -80px; right: 12%;
+    background: radial-gradient(circle, rgba(102,126,234,0.22), transparent 70%);
+  }
+  .bg-orb.two {
+    width: 260px; height: 260px; bottom: -60px; left: 30%;
+    background: radial-gradient(circle, rgba(118,75,162,0.18), transparent 70%);
+  }
+
+  /* ============================================================
+     左侧导航栏（88px）：Logo / 游戏列表 / 添加 / 设置
+     ============================================================ */
+  #sidebar {
+    width: 88px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--sp-4) 0 var(--sp-4);
+    gap: var(--sp-2);
+    position: relative;
+    z-index: 20;
+    -webkit-app-region: drag;
+  }
+
+  #logo {
+    width: 44px; height: 44px;
+    border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    background: linear-gradient(135deg, rgba(102,126,234,0.25), rgba(118,75,162,0.18));
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 4px 14px rgba(102,126,234,0.18);
+    margin-bottom: var(--sp-3);
+  }
+
+  #game-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-3);
+    overflow-y: auto;
+    padding: 2px 0;
+    width: 100%;
+    -webkit-app-region: no-drag;
+  }
+  #game-list::-webkit-scrollbar { width: 0; }
+
+  /* 数据来源：iconPath —— 从游戏 exe 提取的 PNG 图标
+     （userData/icons/<gameId>.png，由主进程 app.getFileIcon 生成） */
+  .game-icon {
+    position: relative;
+    width: 52px; height: 52px;
+    border-radius: var(--r-lg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 12px rgba(45,43,85,0.15);
+    transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+    flex-shrink: 0;
+  }
+  .game-icon:hover {
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 8px 20px rgba(45,43,85,0.22);
+  }
+  .game-icon.active {
+    border-color: rgba(255,255,255,0.9);
+    box-shadow: 0 0 0 2px var(--accent), 0 8px 20px rgba(102,126,234,0.35);
+    transform: scale(1.06);
+  }
+  /* 选中态左侧指示条 */
+  .game-icon.active::before {
+    content: '';
+    position: absolute;
+    left: -19px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px; height: 26px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  }
+  /* 更新中角标 */
+  .game-icon .badge-dot {
+    position: absolute;
+    top: -3px; right: -3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--warning);
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 2px 6px rgba(245,158,11,0.5);
+  }
+
+  #sidebar-divider {
+    width: 32px; height: 1px;
+    background: rgba(45,43,85,0.12);
+    margin: var(--sp-2) 0;
+    flex-shrink: 0;
+  }
+
+  .side-btn {
+    width: 44px; height: 44px;
+    border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 3px 10px var(--glass-shadow);
+    color: var(--text-light);
+    transition: all var(--t-fast);
+    -webkit-app-region: no-drag;
+    flex-shrink: 0;
+  }
+  .side-btn:hover {
+    background: var(--glass-hover);
+    color: var(--text);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(45,43,85,0.14);
+  }
+  #add-game-btn {
+    border-style: dashed;
+    border-color: rgba(45,43,85,0.25);
+    background: rgba(255,255,255,0.35);
+    font-size: 20px;
+    font-weight: 300;
+  }
+  #settings-btn { margin-top: auto; }
+
+  /* ============================================================
+     右侧主区域
+     ============================================================ */
+  #main {
+    flex: 1;
+    position: relative;
+    border-radius: var(--r-xl) 0 0 0;
+    margin: var(--sp-3) var(--sp-3) var(--sp-3) 0;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(45,43,85,0.15);
+    border: 1px solid rgba(255,255,255,0.5);
+    z-index: 1;
+  }
+
+  /* ---- Hero 封面层 ----
+     数据来源：backgroundPath（16:9 封面图）
+     正式版用 background-image + cover 居中裁切，此处用渐变占位 */
+  .hero-bg {
+    position: absolute; inset: 0;
+    transition: opacity 240ms ease;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+  }
+  .hero-bg.fading { opacity: 0; }
+  .hero-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+    pointer-events: none;
+  }
+  .hero-orb.a { width: 300px; height: 300px; top: -90px; right: -60px;
+    background: radial-gradient(circle, rgba(255,255,255,0.35), transparent 70%); }
+  .hero-orb.b { width: 200px; height: 200px; bottom: 20%; left: 8%;
+    background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%); }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse at 70% 20%, black 0%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at 70% 20%, black 0%, transparent 70%);
+  }
+  /* 底部文字可读性 scrim */
+  .hero-scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg,
+      rgba(20,16,48,0.30) 0%,
+      transparent 22%,
+      transparent 46%,
+      rgba(20,16,48,0.62) 100%);
+    z-index: 1;
+  }
+
+  /* ---- 标题栏 ---- */
+  #title-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--sp-3) 0 var(--sp-5, 20px);
+    z-index: 30;
+    -webkit-app-region: drag;
+  }
+  #title-bar .crumb {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 6px rgba(20,16,48,0.4);
+    display: flex; align-items: center; gap: 6px;
+  }
+  #title-btns {
+    margin-left: auto;
+    display: flex;
+    gap: var(--sp-2);
+    -webkit-app-region: no-drag;
+  }
+  .title-btn {
+    width: 34px; height: 26px;
+    border-radius: var(--sp-2);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.9);
+    transition: all var(--t-fast);
+  }
+  .title-btn:hover { background: rgba(255,255,255,0.22); }
+  .title-btn-close:hover { background: var(--danger); color: #fff; }
+
+  /* ---- 媒体切换箭头 ---- */
+  .media-arrow {
+    position: absolute;
+    top: 42%;
+    transform: translateY(-50%);
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: var(--glass-dark);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-dark-border);
+    color: #fff;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+    opacity: 0;
+    transition: all var(--t-fast);
+  }
+  #main:hover .media-arrow { opacity: 1; }
+  .media-arrow:hover { background: rgba(20,16,48,0.45); transform: translateY(-50%) scale(1.08); }
+  #media-arrow-left { left: var(--sp-4); }
+  #media-arrow-right { right: var(--sp-4); }
+
+  /* ---- 媒体指示点 ---- */
+  #media-dots {
+    position: absolute;
+    right: var(--sp-6);
+    bottom: var(--sp-8);
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.4);
+    transition: all var(--t-normal);
+    cursor: pointer;
+  }
+  .dot.active { width: 18px; background: #fff; }
+
+  /* ---- 游戏信息 + 操作区（左下） ---- */
+  #hero-info {
+    position: absolute;
+    left: var(--sp-8);
+    bottom: var(--sp-8);
+    z-index: 10;
+    max-width: 62%;
+    transition: opacity 200ms ease, transform 200ms ease;
+  }
+  #hero-info.fading { opacity: 0; transform: translateY(8px); }
+
+  #game-status-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--glass-dark);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-dark-border);
+  }
+  .status-chip .led {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+  }
+  .status-chip.updating .led { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+
+  #game-name {
+    font-size: 42px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -1px;
+    line-height: 1.15;
+    text-shadow: 0 2px 20px rgba(20,16,48,0.5);
+  }
+  #game-name-en {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.72);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+  #game-meta {
+    display: flex;
+    gap: var(--sp-6);
+    margin-top: var(--sp-4);
+  }
+  .meta-item .meta-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+  .meta-item .meta-value {
+    font-size: 15px;
+    color: #fff;
+    font-weight: 700;
+    text-shadow: 0 1px 8px rgba(20,16,48,0.4);
+  }
+
+  /* ---- 主操作按钮组 ---- */
+  #hero-actions {
+    position: absolute;
+    right: var(--sp-8);
+    bottom: calc(var(--sp-8) + 18px);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    z-index: 11;
+    transition: opacity 200ms ease;
+  }
+  #launch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 54px;
+    padding: 0 34px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.95);
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    box-shadow: 0 10px 30px rgba(20,16,48,0.35), inset 0 1px 0 #fff;
+    transition: all var(--t-fast);
+  }
+  #launch-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 16px 40px rgba(20,16,48,0.42), inset 0 1px 0 #fff;
+  }
+  #launch-btn:active { transform: translateY(0) scale(0.99); }
+  #launch-btn.running {
+    background: var(--glass-dark);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-dark-border);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(20,16,48,0.3);
+  }
+  .action-btn {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: var(--glass-dark);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-dark-border);
+    color: rgba(255,255,255,0.9);
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+  }
+  .action-btn:hover { background: rgba(20,16,48,0.45); transform: translateY(-2px); }
+
+  /* ---- 下载浮层卡片（右下，不打断浏览） ---- */
+  #download-card {
+    position: absolute;
+    right: var(--sp-6);
+    top: 60px;
+    width: 300px;
+    padding: var(--sp-4);
+    border-radius: var(--r-lg);
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(1.3);
+    -webkit-backdrop-filter: blur(20px) saturate(1.3);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 12px 36px rgba(45,43,85,0.18);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    z-index: 25;
+    animation: slideIn 0.4s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .dl-ring { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+  .dl-ring svg { transform: rotate(-90deg); }
+  .dl-ring circle { fill: none; stroke-width: 5; }
+  .dl-ring .ring-bg { stroke: rgba(255,255,255,0.7); }
+  .dl-ring .ring-fill {
+    stroke: url(#ringGrad);
+    stroke-linecap: round;
+    stroke-dasharray: 138.2;
+    stroke-dashoffset: calc(138.2 * (1 - var(--p, 0.68)));
+    transition: stroke-dashoffset 0.5s ease;
+  }
+  .dl-ring .dl-pct {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: var(--text);
+  }
+  .dl-info { flex: 1; min-width: 0; }
+  .dl-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dl-sub { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+  .dl-actions { display: flex; gap: 6px; }
+  .dl-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--glass-border);
+    font-size: 11px;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+  }
+  .dl-btn:hover { background: #fff; }
+
+  /* ============================================================
+     设置面板（右侧滑出）
+     ============================================================ */
+  #settings-overlay {
+    position: fixed; inset: 0;
+    background: rgba(45,43,85,0.18);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 40;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-normal);
+  }
+  #settings-overlay.open { opacity: 1; pointer-events: auto; }
+
+  #settings-panel {
+    position: fixed;
+    top: var(--sp-3); right: var(--sp-3); bottom: var(--sp-3);
+    width: 620px;
+    max-width: calc(100vw - 120px);
+    border-radius: var(--r-xl);
+    background: rgba(248,248,255,0.82);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.8);
+    box-shadow: 0 30px 80px rgba(45,43,85,0.28);
+    z-index: 41;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateX(calc(100% + 24px));
+    transition: transform var(--t-normal);
+  }
+  #settings-panel.open { transform: translateX(0); }
+
+  #settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-5, 20px) var(--sp-6) var(--sp-4);
+    border-bottom: 1px solid rgba(45,43,85,0.08);
+  }
+  #settings-header .title {
+    font-size: 17px; font-weight: 800;
+    display: flex; align-items: center; gap: var(--sp-2);
+  }
+  #settings-close-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text-light);
+    font-size: 13px;
+    transition: all var(--t-fast);
+  }
+  #settings-close-btn:hover { background: var(--glass-hover); color: var(--text); }
+
+  #settings-body { flex: 1; display: flex; min-height: 0; }
+
+  #settings-sidebar {
+    width: 168px;
+    flex-shrink: 0;
+    padding: var(--sp-4) var(--sp-3);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-right: 1px solid rgba(45,43,85,0.08);
+  }
+  .settings-category {
+    padding: 10px 14px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all var(--t-fast);
+    display: flex; align-items: center; gap: var(--sp-2);
+  }
+  .settings-category:hover { background: rgba(255,255,255,0.5); color: var(--text); }
+  .settings-category.active {
+    background: linear-gradient(135deg, rgba(102,126,234,0.16), rgba(118,75,162,0.10));
+    color: #5A6AE0;
+    box-shadow: inset 0 0 0 1px rgba(102,126,234,0.25);
+  }
+
+  #settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--sp-4) var(--sp-6) var(--sp-6);
+  }
+  #settings-content::-webkit-scrollbar { width: 4px; }
+  #settings-content::-webkit-scrollbar-thumb { background: rgba(102,126,234,0.25); border-radius: 2px; }
+
+  .section-title {
+    font-size: 12px; font-weight: 700;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: var(--sp-4) 0 var(--sp-3);
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* 设置中的游戏行 */
+  .s-game-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-lg);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 3px 10px var(--glass-shadow);
+    margin-bottom: var(--sp-3);
+    transition: all var(--t-fast);
+  }
+  .s-game-row:hover { background: var(--glass-hover); transform: translateY(-1px); }
+  .s-game-cover {
+    width: 52px; height: 52px;
+    border-radius: var(--r-md);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 3px 8px rgba(45,43,85,0.2);
+  }
+  .s-game-info { flex: 1; min-width: 0; }
+  .s-game-name { font-size: 14px; font-weight: 700; }
+  .s-game-sub { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+  .s-game-actions { display: flex; align-items: center; gap: var(--sp-3); flex-shrink: 0; }
+  .s-mini-label { font-size: 11px; color: var(--text-light); }
+
+  .s-remove {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    font-size: 13px;
+    color: var(--text-faint);
+    transition: all var(--t-fast);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .s-remove:hover { background: rgba(229,72,77,0.1); color: var(--danger); }
+
+  .s-icon-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    font-size: 13px;
+    color: var(--text-light);
+    transition: all var(--t-fast);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .s-icon-btn:hover { background: rgba(102,126,234,0.12); color: var(--accent); }
+
+  /* 开关 */
+  .toggle {
+    width: 42px; height: 24px;
+    border-radius: 12px;
+    background: rgba(45,43,85,0.14);
+    position: relative;
+    transition: all var(--t-normal);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    top: 3px; left: 3px;
+    transition: all var(--t-normal);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .toggle.on {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    box-shadow: 0 2px 8px rgba(102,126,234,0.35);
+  }
+  .toggle.on::after { left: 21px; }
+
+  /* 表单行（下载设置） */
+  .s-form-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: var(--sp-4);
+    border-radius: var(--r-lg);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 3px 10px var(--glass-shadow);
+    margin-bottom: var(--sp-3);
+  }
+  .s-form-label { flex: 1; }
+  .s-form-label .l1 { font-size: 13px; font-weight: 700; }
+  .s-form-label .l2 { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+  .s-path {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    background: rgba(102,126,234,0.1);
+    border: 1px solid rgba(102,126,234,0.22);
+    padding: 6px 12px;
+    border-radius: var(--r-sm);
+    max-width: 220px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .s-browse {
+    padding: 7px 14px;
+    border-radius: var(--r-sm);
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--glass-border);
+    font-size: 12px; font-weight: 600;
+    color: var(--text);
+    transition: all var(--t-fast);
+  }
+  .s-browse:hover { background: #fff; }
+
+  /* 分段选择器 */
+  .segmented {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border-radius: var(--r-sm);
+    background: rgba(45,43,85,0.08);
+  }
+  .segmented button {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 12px; font-weight: 600;
+    color: var(--text-light);
+    transition: all var(--t-fast);
+  }
+  .segmented button.active {
+    background: #fff;
+    color: var(--text);
+    box-shadow: 0 2px 6px rgba(45,43,85,0.12);
+  }
+
+  /* ---- Toast ---- */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 36px;
+    transform: translateX(-50%) translateY(20px);
+    padding: 12px 22px;
+    border-radius: 999px;
+    background: rgba(45,43,85,0.88);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 12px 32px rgba(45,43,85,0.35);
+    z-index: 60;
+    opacity: 0;
+    pointer-events: none;
+    transition: all var(--t-normal);
+    display: flex; align-items: center; gap: var(--sp-2);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 减少动态偏好 */
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-orb one"></div>
+<div class="bg-orb two"></div>
+
+<div id="app">
+  <!-- ================= 左侧导航栏 ================= -->
+  <aside id="sidebar">
+    <div id="logo" title="Star Launcher">⭐</div>
+    <div id="game-list" role="tablist" aria-label="游戏列表"></div>
+    <div id="sidebar-divider"></div>
+    <button id="add-game-btn" class="side-btn" title="添加游戏" aria-label="添加游戏">+</button>
+    <button id="settings-btn" class="side-btn" title="设置" aria-label="设置">⚙</button>
+  </aside>
+
+  <!-- ================= 右侧主区域 ================= -->
+  <main id="main">
+    <!-- Hero 封面 -->
+    <div class="hero-bg" id="hero-bg">
+      <div class="hero-orb a"></div>
+      <div class="hero-orb b"></div>
+      <div class="hero-grid"></div>
+    </div>
+    <div class="hero-scrim"></div>
+
+    <!-- 标题栏 -->
+    <div id="title-bar">
+      <div class="crumb">⭐ Star Launcher <span style="opacity:.55;font-weight:400">/ 游戏库</span></div>
+      <div id="title-btns">
+        <button class="title-btn" title="最小化" aria-label="最小化">
+          <svg width="10" height="10" viewBox="0 0 10 10"><rect y="4" width="10" height="1.2" fill="currentColor"/></svg>
+        </button>
+        <button class="title-btn" title="最大化" aria-label="最大化">
+          <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.75" y="0.75" width="8.5" height="8.5" fill="none" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+        <button class="title-btn title-btn-close" title="关闭" aria-label="关闭">
+          <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 媒体切换 -->
+    <button id="media-arrow-left" class="media-arrow" title="上一张" aria-label="上一张">◀</button>
+    <button id="media-arrow-right" class="media-arrow" title="下一张" aria-label="下一张">▶</button>
+    <div id="media-dots"></div>
+
+    <!-- 游戏信息 -->
+    <div id="hero-info">
+      <div id="game-status-row">
+        <span class="status-chip" id="status-chip"><span class="led"></span><span id="status-text">已安装</span></span>
+        <span class="status-chip" id="version-chip">v1.6.9</span>
+      </div>
+      <div id="game-name">星露谷物语</div>
+      <div id="game-name-en">Stardew Valley</div>
+      <div id="game-meta">
+        <div class="meta-item">
+          <div class="meta-label">上次游玩</div>
+          <div class="meta-value" id="meta-last">2 小时前</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">总时长</div>
+          <div class="meta-value" id="meta-hours">128 小时</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主操作 -->
+    <div id="hero-actions">
+      <button class="action-btn" title="游戏详情" aria-label="游戏详情">ⓘ</button>
+      <button class="action-btn" title="打开安装目录" aria-label="打开安装目录">📁</button>
+      <button id="launch-btn"><span id="launch-icon">▶</span><span id="launch-text">启动游戏</span></button>
+    </div>
+
+    <!-- 下载浮层 -->
+    <div id="download-card" role="status" aria-live="polite">
+      <div class="dl-ring" id="dl-ring" style="--p:0.68">
+        <svg width="52" height="52" viewBox="0 0 52 52">
+          <circle class="ring-bg" cx="26" cy="26" r="22"/>
+          <circle class="ring-fill" cx="26" cy="26" r="22"/>
+        </svg>
+        <span class="dl-pct" id="dl-pct">68%</span>
+      </div>
+      <div class="dl-info">
+        <div class="dl-title">赛博朋克 2077 · 更新中</div>
+        <div class="dl-sub"><span id="dl-speed">24.6 MB/s</span> · 剩余约 <span id="dl-eta">8 分钟</span></div>
+      </div>
+      <div class="dl-actions">
+        <button class="dl-btn" id="dl-pause" title="暂停" aria-label="暂停下载">⏸</button>
+        <button class="dl-btn" title="取消" aria-label="取消下载">✕</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ================= 设置面板 ================= -->
+<div id="settings-overlay"></div>
+<section id="settings-panel" aria-label="设置">
+  <div id="settings-header">
+    <div class="title">⚙ 设置</div>
+    <button id="settings-close-btn" title="关闭" aria-label="关闭设置">✕</button>
+  </div>
+  <div id="settings-body">
+    <nav id="settings-sidebar">
+      <div class="settings-category active" data-category="games">🎮 游戏管理</div>
+      <div class="settings-category" data-category="download">📥 下载管理</div>
+    </nav>
+    <div id="settings-content">
+      <!-- 游戏管理 -->
+      <div id="panel-games">
+        <div class="section-title">已添加的游戏 · 5</div>
+        <div id="settings-game-list"></div>
+      </div>
+      <!-- 下载管理 -->
+      <div id="panel-download" style="display:none">
+        <div class="section-title">存储</div>
+        <div class="s-form-row">
+          <div class="s-form-label">
+            <div class="l1">下载路径</div>
+            <div class="l2">游戏安装与更新的存储位置</div>
+          </div>
+          <div class="s-path" title="D:\Games\StarLibrary">D:\Games\StarLibrary</div>
+          <button class="s-browse">浏览…</button>
+        </div>
+        <div class="section-title">网络</div>
+        <div class="s-form-row">
+          <div class="s-form-label">
+            <div class="l1">下载限速</div>
+            <div class="l2">开启后限制下载带宽占用</div>
+          </div>
+          <div class="toggle" role="switch" aria-checked="false" tabindex="0"></div>
+        </div>
+        <div class="s-form-row">
+          <div class="s-form-label">
+            <div class="l1">同时下载任务数</div>
+            <div class="l2">多个更新并行下载</div>
+          </div>
+          <div class="segmented" role="radiogroup" aria-label="同时下载任务数">
+            <button class="active">1 个</button>
+            <button>2 个</button>
+            <button>3 个</button>
+          </div>
+        </div>
+        <div class="section-title">更新</div>
+        <div class="s-form-row">
+          <div class="s-form-label">
+            <div class="l1">自动更新游戏</div>
+            <div class="l2">空闲时自动下载并安装更新</div>
+          </div>
+          <div class="toggle on" role="switch" aria-checked="true" tabindex="0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="toast" role="status"></div>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script>
+/* ==================== 数据（演示） ====================
+   正式版字段映射：icon ← game.iconPath（exe 提取）
+                  hero 背景 ← game.backgroundPath（16:9 封面图）
+                  状态 ← game.updateStatus / currentVersion */
+const GAMES = [
+  { id:'stardew', name:'星露谷物语', en:'Stardew Valley', icon:'🌾',
+    grad:'linear-gradient(155deg,#9be15d 0%,#4e9b47 55%,#3a7d44 100%)',
+    last:'2 小时前', hours:'128 小时', ver:'v1.6.9', status:'ready' },
+  { id:'hollow', name:'空洞骑士', en:'Hollow Knight', icon:'🗡️',
+    grad:'linear-gradient(155deg,#4b6cb7 0%,#182848 100%)',
+    last:'昨天', hours:'46 小时', ver:'v1.5.78', status:'ready' },
+  { id:'cyber', name:'赛博朋克 2077', en:'Cyberpunk 2077', icon:'🌃',
+    grad:'linear-gradient(155deg,#f857a6 0%,#ff5858 60%,#c94b4b 100%)',
+    last:'3 天前', hours:'89 小时', ver:'v2.12', status:'updating' },
+  { id:'genshin', name:'原神', en:'Genshin Impact', icon:'✨',
+    grad:'linear-gradient(155deg,#4facfe 0%,#00c6fb 60%,#3a7bd5 100%)',
+    last:'今天 09:20', hours:'312 小时', ver:'v5.1', status:'ready' },
+  { id:'dyson', name:'戴森球计划', en:'Dyson Sphere Program', icon:'🪐',
+    grad:'linear-gradient(155deg,#ff8008 0%,#ffc837 100%)',
+    last:'1 周前', hours:'203 小时', ver:'v0.10.30', status:'ready' },
+];
+
+let currentIndex = 0;
+let mediaIndex = 0;
+const MEDIA_COUNT = 3;
+let running = false;
+
+/* ==================== 元素 ==================== */
+const $ = id => document.getElementById(id);
+const gameListEl = $('game-list');
+const heroBg = $('hero-bg');
+const heroInfo = $('hero-info');
+const dotsEl = $('media-dots');
+
+/* ==================== 侧边栏渲染 ==================== */
+function renderSidebar() {
+  gameListEl.innerHTML = '';
+  GAMES.forEach((g, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'game-icon' + (i === currentIndex ? ' active' : '');
+    btn.style.background = g.grad;
+    btn.textContent = g.icon;
+    btn.title = g.name;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-label', g.name);
+    btn.setAttribute('aria-selected', i === currentIndex);
+    if (g.status === 'updating') {
+      const dot = document.createElement('span');
+      dot.className = 'badge-dot';
+      btn.appendChild(dot);
+    }
+    btn.addEventListener('click', () => selectGame(i));
+    gameListEl.appendChild(btn);
+  });
+}
+
+/* ==================== 媒体指示点 ==================== */
+function renderDots() {
+  dotsEl.innerHTML = '';
+  for (let i = 0; i < MEDIA_COUNT; i++) {
+    const d = document.createElement('span');
+    d.className = 'dot' + (i === mediaIndex ? ' active' : '');
+    d.addEventListener('click', () => { mediaIndex = i; renderDots(); });
+    dotsEl.appendChild(d);
+  }
+}
+
+/* ==================== 切换游戏 ==================== */
+function selectGame(i) {
+  if (i === currentIndex) return;
+  currentIndex = i;
+  mediaIndex = 0;
+  const g = GAMES[i];
+
+  heroBg.classList.add('fading');
+  heroInfo.classList.add('fading');
+
+  setTimeout(() => {
+    heroBg.style.background = g.grad;
+    $('game-name').textContent = g.name;
+    $('game-name-en').textContent = g.en;
+    $('meta-last').textContent = g.last;
+    $('meta-hours').textContent = g.hours;
+    $('version-chip').textContent = g.ver;
+
+    const chip = $('status-chip');
+    if (g.status === 'updating') {
+      chip.classList.add('updating');
+      $('status-text').textContent = '更新中';
+    } else {
+      chip.classList.remove('updating');
+      $('status-text').textContent = '已安装';
+    }
+
+    renderSidebar();
+    renderDots();
+    heroBg.classList.remove('fading');
+    heroInfo.classList.remove('fading');
+  }, 240);
+}
+
+/* ==================== 媒体箭头 ==================== */
+$('media-arrow-left').addEventListener('click', () => {
+  mediaIndex = (mediaIndex - 1 + MEDIA_COUNT) % MEDIA_COUNT;
+  renderDots();
+});
+$('media-arrow-right').addEventListener('click', () => {
+  mediaIndex = (mediaIndex + 1) % MEDIA_COUNT;
+  renderDots();
+});
+
+/* ==================== 启动按钮 ==================== */
+$('launch-btn').addEventListener('click', () => {
+  const btn = $('launch-btn');
+  const icon = $('launch-icon');
+  const text = $('launch-text');
+  const g = GAMES[currentIndex];
+
+  if (!running) {
+    btn.disabled = true;
+    icon.textContent = '⏳';
+    text.textContent = '正在启动…';
+    setTimeout(() => {
+      running = true;
+      btn.disabled = false;
+      btn.classList.add('running');
+      icon.textContent = '■';
+      text.textContent = '停止';
+      showToast('🎮 《' + g.name + '》已启动，玩得开心！');
+    }, 1200);
+  } else {
+    running = false;
+    btn.classList.remove('running');
+    icon.textContent = '▶';
+    text.textContent = '启动游戏';
+    showToast('《' + g.name + '》已关闭');
+  }
+});
+
+/* ==================== 设置面板 ==================== */
+function openSettings() {
+  $('settings-overlay').classList.add('open');
+  $('settings-panel').classList.add('open');
+}
+function closeSettings() {
+  $('settings-overlay').classList.remove('open');
+  $('settings-panel').classList.remove('open');
+}
+$('settings-btn').addEventListener('click', openSettings);
+$('settings-close-btn').addEventListener('click', closeSettings);
+$('settings-overlay').addEventListener('click', closeSettings);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
+
+/* 设置分类切换 */
+document.querySelectorAll('.settings-category').forEach(cat => {
+  cat.addEventListener('click', () => {
+    document.querySelectorAll('.settings-category').forEach(c => c.classList.remove('active'));
+    cat.classList.add('active');
+    const isGames = cat.dataset.category === 'games';
+    $('panel-games').style.display = isGames ? '' : 'none';
+    $('panel-download').style.display = isGames ? 'none' : '';
+  });
+});
+
+/* 设置面板中的游戏列表 */
+function renderSettingsGames() {
+  const wrap = $('settings-game-list');
+  wrap.innerHTML = '';
+  GAMES.forEach(g => {
+    const row = document.createElement('div');
+    row.className = 's-game-row';
+    row.innerHTML =
+      '<div class="s-game-cover" style="background:' + g.grad + '">' + g.icon + '</div>' +
+      '<div class="s-game-info">' +
+        '<div class="s-game-name">' + g.name + '</div>' +
+        '<div class="s-game-sub">' + g.en + ' · ' + g.ver + '</div>' +
+      '</div>' +
+      '<div class="s-game-actions">' +
+        '<button class="s-icon-btn s-cover-btn" title="更换封面图（16:9）" aria-label="更换 ' + g.name + ' 封面">🖼</button>' +
+        '<button class="s-icon-btn s-icon-refresh" title="重新提取 exe 图标" aria-label="重新提取 ' + g.name + ' 图标">⟳</button>' +
+        '<span class="s-mini-label">自动更新</span>' +
+        '<div class="toggle' + (g.status !== 'updating' ? ' on' : '') + '" role="switch" aria-checked="' + (g.status !== 'updating') + '" tabindex="0"></div>' +
+        '<button class="s-remove" title="移除" aria-label="移除 ' + g.name + '">✕</button>' +
+      '</div>';
+    row.querySelector('.s-remove').addEventListener('click', () => {
+      showToast('已移除《' + g.name + '》（演示）');
+    });
+    row.querySelector('.s-cover-btn').addEventListener('click', () => {
+      showToast('打开文件选择器，选择 16:9 封面图（演示）');
+    });
+    row.querySelector('.s-icon-refresh').addEventListener('click', () => {
+      showToast('已从 exe 重新提取《' + g.name + '》图标（演示）');
+    });
+    wrap.appendChild(row);
+  });
+}
+
+/* 开关（事件委托） */
+document.addEventListener('click', e => {
+  const t = e.target.closest('.toggle');
+  if (!t) return;
+  t.classList.toggle('on');
+  t.setAttribute('aria-checked', t.classList.contains('on'));
+});
+document.addEventListener('keydown', e => {
+  const t = e.target.closest && e.target.closest('.toggle');
+  if (t && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    t.classList.toggle('on');
+    t.setAttribute('aria-checked', t.classList.contains('on'));
+  }
+});
+
+/* 分段选择器 */
+document.querySelectorAll('.segmented').forEach(seg => {
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    seg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+
+/* ==================== 下载浮层（演示进度） ==================== */
+let dlPct = 68;
+let dlPaused = false;
+setInterval(() => {
+  if (dlPaused) return;
+  dlPct += 1;
+  if (dlPct > 99) dlPct = 34; // 循环演示
+  $('dl-ring').style.setProperty('--p', dlPct / 100);
+  $('dl-pct').textContent = dlPct + '%';
+}, 1500);
+$('dl-pause').addEventListener('click', function () {
+  dlPaused = !dlPaused;
+  this.textContent = dlPaused ? '▶' : '⏸';
+  showToast(dlPaused ? '下载已暂停' : '继续下载');
+});
+
+/* ==================== Toast ==================== */
+let toastTimer = null;
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* 添加游戏（演示） */
+$('add-game-btn').addEventListener('click', () => showToast('打开「添加游戏」对话框（演示）'));
+
+/* ==================== 初始化 ==================== */
+heroBg.style.background = GAMES[0].grad;
+renderSidebar();
+renderDots();
+renderSettingsGames();
+</script>
+</body>
+</html>

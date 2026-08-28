@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { getAllGames, getGameById, addGame, updateGame, removeGame, reorderGames, getSettings, updateSettings } = require('./store');
@@ -148,6 +148,17 @@ ipcMain.handle('select-media-dir', async () => {
   });
   if (result.canceled || result.filePaths.length === 0) return null;
   return result.filePaths[0];
+});
+
+// 在资源管理器中打开路径（安装目录）
+ipcMain.handle('open-path', async (_e, targetPath) => {
+  if (!targetPath) return { error: 'path is empty' };
+  try {
+    await shell.openPath(targetPath);
+    return { ok: true };
+  } catch (err) {
+    return { error: err.message };
+  }
 });
 
 // 扫描媒体目录中的图片和视频文件

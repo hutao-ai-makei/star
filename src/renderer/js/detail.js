@@ -3,15 +3,35 @@
  * @param {Object} game - 游戏对象
  */
 async function renderDetail(game) {
+  const nameEl = document.getElementById('game-name');
+  const enEl = document.getElementById('game-name-en');
+  const lastEl = document.getElementById('meta-last');
+  const hoursEl = document.getElementById('meta-hours');
+  const verEl = document.getElementById('version-chip');
+  const chip = document.getElementById('status-chip');
+  const chipText = document.getElementById('status-text');
+
   if (!game) {
-    document.getElementById('game-name').textContent = '';
-    document.getElementById('game-last-played').textContent = '';
+    nameEl.textContent = '';
+    enEl.textContent = '';
+    lastEl.textContent = '从未游玩';
+    hoursEl.textContent = '尚未游玩';
+    verEl.textContent = '';
+    chipText.textContent = '未安装';
+    chip.classList.remove('updating');
     await setBackground(null);
     return;
   }
 
-  document.getElementById('game-name').textContent = game.name;
-  document.getElementById('game-last-played').textContent = '上次游玩 · ' + formatLastPlayed(game.lastPlayedAt);
+  nameEl.textContent = game.name;
+  enEl.textContent = game.enName || '';   // 数据中暂无英文名，留空则自动隐藏
+  lastEl.textContent = formatLastPlayed(game.lastPlayedAt);
+  hoursEl.textContent = formatPlayTime(game.totalPlayTime) || '尚未游玩';
+  verEl.textContent = game.currentVersion || '';
+
+  const updating = ['downloading', 'pending', 'decompressing', 'merging', 'verifying', 'paused'].includes(game.updateStatus);
+  chip.classList.toggle('updating', updating);
+  chipText.textContent = updating ? '更新中' : '已安装';
 
   // 右侧主背景：mediaDir > videoPath > backgroundPath > 默认渐变
   await setBackground(game);
@@ -31,18 +51,16 @@ async function setBackground(game) {
   const version = ++bgVersion;
   const area = document.getElementById('cover-area');
 
-  // 清理旧视频
   removeBgVideo();
 
-  // 重置背景样式
   area.style.backgroundImage = '';
   area.style.background = '';
   area.style.backgroundSize = '';
   area.style.backgroundRepeat = '';
   area.style.backgroundPosition = '';
 
-  // 隐藏箭头
   showArrows(false);
+  renderMediaDots();
 
   if (!game) {
     mediaFiles = [];
@@ -54,7 +72,6 @@ async function setBackground(game) {
   // 1. 媒体目录优先
   if (game.mediaDir) {
     const result = await window.electronAPI.scanMediaDir(game.mediaDir);
-    // 竞态检查：如果在等待期间又触发了新的 setBackground，放弃本次结果
     if (version !== bgVersion) return;
     if (result && result.files && result.files.length > 0) {
       mediaFiles = result.files;
@@ -62,10 +79,10 @@ async function setBackground(game) {
       showMediaFile(mediaFiles[0]);
       if (mediaFiles.length > 1) {
         showArrows(true);
+        renderMediaDots();
       }
       return;
     }
-    // 目录为空或无文件，继续 fallback
     mediaFiles = [];
   }
 
@@ -105,29 +122,35 @@ function showMediaFile(file) {
     const url = file.path.replace(/\\/g, '/');
     area.style.backgroundImage = `url(file:///${url})`;
   }
+  renderMediaDots();
 }
 
-/**
- * 切换到上一个媒体
- */
+/** 渲染媒体指示点 */
+function renderMediaDots() {
+  const dotsEl = document.getElementById('media-dots');
+  if (!dotsEl) return;
+  dotsEl.innerHTML = '';
+  if (!mediaFiles.length || mediaFiles.length < 2) return;
+  mediaFiles.forEach((_, i) => {
+    const d = document.createElement('span');
+    d.className = 'dot' + (i === mediaIndex ? ' active' : '');
+    d.addEventListener('click', () => { mediaIndex = i; showMediaFile(mediaFiles[i]); });
+    dotsEl.appendChild(d);
+  });
+}
+
 function prevMedia() {
   if (!mediaFiles.length) return;
   mediaIndex = (mediaIndex - 1 + mediaFiles.length) % mediaFiles.length;
   showMediaFile(mediaFiles[mediaIndex]);
 }
 
-/**
- * 切换到下一个媒体
- */
 function nextMedia() {
   if (!mediaFiles.length) return;
   mediaIndex = (mediaIndex + 1) % mediaFiles.length;
   showMediaFile(mediaFiles[mediaIndex]);
 }
 
-/**
- * 插入背景视频元素
- */
 function insertBgVideo(videoPath) {
   const area = document.getElementById('cover-area');
   const videoUrl = videoPath.replace(/\\/g, '/');
@@ -139,7 +162,7 @@ function insertBgVideo(videoPath) {
   video.muted = true;
   video.playsInline = true;
   video.style.cssText = `
-    position: absolute; inset: 0; z-index: 0;
+    position: absolute; inset: 0; z-index: 1;
     width: 100%; height: 100%;
     object-fit: cover;
     pointer-events: none;
@@ -148,9 +171,6 @@ function insertBgVideo(videoPath) {
   area.insertBefore(video, area.firstChild);
 }
 
-/**
- * 移除背景视频元素
- */
 function removeBgVideo() {
   const area = document.getElementById('cover-area');
   const video = area.querySelector('.bg-video');
@@ -162,9 +182,6 @@ function removeBgVideo() {
   }
 }
 
-/**
- * 显示/隐藏左右箭头
- */
 function showArrows(visible) {
   const left = document.getElementById('media-arrow-left');
   const right = document.getElementById('media-arrow-right');
@@ -181,18 +198,11 @@ function bindMediaArrows() {
   if (right) right.addEventListener('click', (e) => { e.stopPropagation(); nextMedia(); });
 }
 
-// 页面加载时绑定
 document.addEventListener('DOMContentLoaded', bindMediaArrows);
 
-// 键盘左右键切换
 document.addEventListener('keydown', (e) => {
   if (!mediaFiles.length) return;
-  if (e.key === 'ArrowLeft') {
-    // 不拦截已经在输入框的情况
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-    prevMedia();
-  } else if (e.key === 'ArrowRight') {
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-    nextMedia();
-  }
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft') prevMedia();
+  else if (e.key === 'ArrowRight') nextMedia();
 });

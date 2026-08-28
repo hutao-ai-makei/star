@@ -34,6 +34,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
   closeWindow: () => ipcRenderer.invoke('close-window'),
 
+  // 在资源管理器中打开路径
+  openPath: (targetPath) => ipcRenderer.invoke('open-path', targetPath),
+
   // 事件监听
   onGameExited: (callback) => {
     ipcRenderer.on('game-exited', (_event, data) => callback(data));
