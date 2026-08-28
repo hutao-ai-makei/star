@@ -179,6 +179,12 @@ async function checkForUpdate(gameId) {
     return { ...emptyResult, currentVersion: game.currentVersion || '' };
   }
 
+  // 拒绝不安全的 http 更新源：manifest / deleteFiles 明文传输可被中间人篡改
+  if (!/^https:\/\//i.test(apiBase)) {
+    console.warn(`Refusing insecure (http) update source for game ${gameId}: ${apiBase}`);
+    return { ...emptyResult, currentVersion: game.currentVersion || '', reason: 'insecure-source' };
+  }
+
   const url = buildApiUrl(apiBase, [packageId]);
   const data = await fetchJSON(url);
 

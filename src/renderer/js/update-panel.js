@@ -78,6 +78,10 @@ function escapeHTML(str) {
   return div.innerHTML;
 }
 
+function escapeAttr(str) {
+  return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // === State Renderers ===
 
 function renderForceUpdate(data) {
@@ -89,7 +93,7 @@ function renderForceUpdate(data) {
   const deltaSize = m?.update?.delta?.size || 0;
   const log = m?.updateLog || '';
 
-  updateTitleEl.innerHTML = `⚠️ ${game?.name || ''} 需要强制更新后才可以启动`;
+  updateTitleEl.innerHTML = `⚠️ ${escapeHTML(game?.name || '')} 需要强制更新后才可以启动`;
   updateBodyEl.innerHTML = `
     <div class="update-version-row">
       <span>当前版本 ${escapeHTML(currentVer)}</span>
@@ -116,7 +120,7 @@ function renderNormalUpdate(data) {
   const deltaSize = m?.update?.delta?.size || 0;
   const log = m?.updateLog || '';
 
-  updateTitleEl.innerHTML = `🌟 ${game?.name || ''} 有可用更新`;
+  updateTitleEl.innerHTML = `🌟 ${escapeHTML(game?.name || '')} 有可用更新`;
   updateBodyEl.innerHTML = `
     <div class="update-version-row">
       <span>当前版本 ${escapeHTML(currentVer)}</span>
@@ -139,7 +143,7 @@ function renderChecking(data) {
   updateTitleEl.textContent = '🔍 正在检查更新...';
   updateBodyEl.innerHTML = `
     <div class="update-version-row">
-      <span>${game?.name || ''}</span>
+      <span>${escapeHTML(game?.name || '')}</span>
     </div>
     <div class="update-progress-container">
       <div class="update-progress-bar update-progress-indeterminate"></div>
@@ -157,7 +161,7 @@ function renderPending(data) {
   updateTitleEl.textContent = '⏳ 等待下载';
   updateBodyEl.innerHTML = `
     <div class="update-version-row">
-      <span>${game?.name || ''} 新版本 ${escapeHTML(targetVer)}</span>
+      <span>${escapeHTML(game?.name || '')} 新版本 ${escapeHTML(targetVer)}</span>
     </div>
     <div class="update-size">即将开始下载...</div>
   `;
@@ -229,7 +233,7 @@ function renderPaused(data) {
     <div class="update-progress-stats">点击继续以下载更新</div>
   `;
   updateActionsEl.innerHTML = `
-    <button class="update-btn update-btn-primary" data-action="retry" data-mode="${data.mode || 'full'}">▶ 继续</button>
+    <button class="update-btn update-btn-primary" data-action="retry" data-mode="${escapeAttr(data.mode || 'full')}">▶ 继续</button>
     <button class="update-btn update-btn-skip" data-action="cancel">✕ 取消</button>
   `;
   bindActionButtons(data);
@@ -240,8 +244,8 @@ function renderDone(data) {
   updateBodyEl.innerHTML = `
     <div class="update-done-message">
       ${data.isPreDownload
-        ? `版本 ${data.version || ''} 已准备就绪，等待版本上线后即可安装`
-        : `版本 ${data.version || ''} 下载完成，可以安装了`
+        ? `版本 ${escapeHTML(data.version || '')} 已准备就绪，等待版本上线后即可安装`
+        : `版本 ${escapeHTML(data.version || '')} 下载完成，可以安装了`
       }
     </div>
   `;

@@ -48,6 +48,14 @@ function fileNameFromUrl(url) {
 }
 
 /**
+ * Make a safe file name from a manifest-supplied string.
+ * Manifest file names are untrusted and may contain path separators / traversal.
+ */
+function sanitizeFileName(name) {
+  return (name || '').replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+/**
  * Build TaskFiles from the simplified package manifest used by the current API.
  *
  * @param {object} checkResult — result from checkForUpdate
@@ -69,7 +77,7 @@ function buildTaskFiles(checkResult, cacheDir) {
   if (section.compressedPackages && Array.isArray(section.compressedPackages) && section.compressedPackages.length > 0) {
     taskFiles.push({
       mode: TaskMode.COMPRESSED_PACKAGE,
-      fullPath: path.join(cacheDir, section.fileName || 'update.zip'),
+      fullPath: path.join(cacheDir, sanitizeFileName(section.fileName) || 'update.zip'),
       size: section.totalSize || section.size || 0,
       md5: section.md5 || '',
       sha256: section.sha256 || '',
@@ -86,7 +94,7 @@ function buildTaskFiles(checkResult, cacheDir) {
     // Single file (full zip or binary)
     taskFiles.push({
       mode: TaskMode.SINGLE_FILE,
-      fullPath: path.join(cacheDir, section.fileName || fileNameFromUrl(section.url)),
+      fullPath: path.join(cacheDir, sanitizeFileName(section.fileName) || fileNameFromUrl(section.url)),
       url: section.url,
       size: section.size || 0,
       md5: section.md5 || '',
@@ -99,7 +107,7 @@ function buildTaskFiles(checkResult, cacheDir) {
     for (const audio of section.audioPackages) {
       taskFiles.push({
         mode: TaskMode.SINGLE_FILE,
-        fullPath: path.join(cacheDir, audio.fileName || fileNameFromUrl(audio.url)),
+        fullPath: path.join(cacheDir, sanitizeFileName(audio.fileName) || fileNameFromUrl(audio.url)),
         url: audio.url,
         size: audio.size || 0,
         md5: audio.md5 || '',

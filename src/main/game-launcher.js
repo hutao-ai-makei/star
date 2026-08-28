@@ -1,4 +1,4 @@
-const { spawn, execSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { getGameById, updateGame } = require('./store');
@@ -12,17 +12,23 @@ function getExeName(exePath) {
 }
 
 // 查找指定 exe 名的进程是否在运行
+// 使用 spawnSync 数组参数（不经 shell），避免 exeName 被当作 cmd 指令注入
 function findProcess(exeName) {
   try {
-    const result = execSync(
-      `tasklist /FI "IMAGENAME eq ${exeName}" /FO CSV /NH`,
-      { encoding: 'utf8', timeout: 3000, windowsHide: true }
-    );
+    const r = spawnSync('tasklist', ['/FI', `IMAGENAME eq ${exeName}`, '/FO', 'CSV', '/NH'], {
+      encoding: 'utf8',
+      timeout: 3000,
+      windowsHide: true
+    });
+    const result = r.stdout || '';
     if (!result.trim()) return null;
-    // 解析 "Endfield.exe","20512","Console","1","129,096 K"
-    const match = result.match(/"([^"]+)","(\d+)"/);
-    if (match) {
-      return { name: match[1], pid: parseInt(match[2]) };
+    // 按行解析 CSV，精确匹配进程名（/FI 过滤可能不精确，避免误判同名进程）
+    const lower = exeName.toLowerCase();
+    for (const line of result.split(/\r?\n/)) {
+      const m = line.match(/^"([^"]+)","(\d+)"/);
+      if (m && m[1].toLowerCase() === lower) {
+        return { name: m[1], pid: parseInt(m[2]) };
+      }
     }
     return null;
   } catch (_) {
@@ -79,6 +85,12 @@ function launch(id, mainWindow) {
     // 检测文件是否存在
     if (!fs.existsSync(exePath)) {
       resolve({ success: false, error: '找不到可执行文件：' + exePath });
+      return;
+    }
+
+    // 校验路径不含 cmd 特殊字符（避免 spawn('cmd',['/c','start','',exePath]) 被解释）
+    if (/[&|<>^]/.test(exePath)) {
+      resolve({ success: false, error: '可执行文件路径含不安全字符，已拒绝启动' });
       return;
     }
 

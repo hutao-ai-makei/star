@@ -25,7 +25,7 @@ function createWindow() {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   });
 
@@ -332,7 +332,7 @@ ipcMain.handle('check-update', async (_e, gameId) => {
 
 // Start download (and install)
 ipcMain.handle('start-download', async (_e, gameId, mode) => {
-  const game = require('./store').getGameById(gameId);
+  const game = getGameById(gameId);
   if (!game) return { success: false, error: 'Game not found' };
 
   try {
@@ -350,7 +350,7 @@ ipcMain.handle('start-download', async (_e, gameId, mode) => {
     }
 
     // Persist update metadata
-    require('./store').updateGame(gameId, {
+    updateGame(gameId, {
       targetVersion: check.targetVersion,
       updateMode: mode === 'delta' ? 'delta' : 'full',
       updateLog: check.manifest?.updateLog || '',
@@ -401,7 +401,7 @@ ipcMain.handle('cancel-download', (_e, gameId) => {
   }
 
   // Also clear persisted update state if no active task
-  require('./store').updateGame(gameId, {
+  updateGame(gameId, {
     updateStatus: 'idle',
     targetVersion: '',
     downloadProgress: { totalBytes: 0, downloadedBytes: 0, speed: 0, chunks: [] },
@@ -452,7 +452,7 @@ ipcMain.handle('rollback-game', async (_e, gameId) => {
     } else {
       // No active task: roll back using the latest backup if any
       const { rollbackUpdate, listBackups } = require('./install-manager');
-      const game = require('./store').getGameById(gameId);
+      const game = getGameById(gameId);
       if (!game) throw new Error('Game not found');
 
       const installDir = game.installDir || path.dirname(game.exePath);
@@ -468,7 +468,7 @@ ipcMain.handle('rollback-game', async (_e, gameId) => {
 
     // Restore the recorded current version so update detection stays consistent.
     if (oldVersion) {
-      require('./store').updateGame(gameId, {
+      updateGame(gameId, {
         currentVersion: oldVersion,
         targetVersion: '',
         updateStatus: 'idle',

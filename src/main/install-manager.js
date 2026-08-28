@@ -41,6 +41,55 @@ function ensureParent(filePath) {
   }
 }
 
+/**
+ * Resolve a relative path under `base`, rejecting any traversal outside it
+ * (Zip Slip / manifest injection defense).
+ * @param {string} base - trusted root directory
+ * @param {string} rel - untrusted relative path (from zip entries / manifest)
+ * @returns {string} resolved absolute path, guaranteed to be inside base
+ * @throws if rel escapes base
+ */
+function safeResolve(base, rel) {
+  const baseResolved = path.resolve(base);
+  const resolved = path.resolve(baseResolved, rel);
+  if (resolved !== baseResolved && !resolved.startsWith(baseResolved + path.sep)) {
+    throw new Error(`Unsafe path rejected (escapes install dir): ${rel}`);
+  }
+  return resolved;
+}
+
+/**
+ * Verify a list of relative paths are all safe (do not escape base).
+ * @returns {boolean}
+ */
+function allSafe(base, rels) {
+  const baseResolved = path.resolve(base);
+  return rels.every(rel => {
+    const resolved = path.resolve(baseResolved, rel);
+    return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
+  });
+}
+
+/**
+ * Validate a filesystem path before passing it to external tools (PowerShell).
+ * Rejects relative paths and traversal to reduce command-injection surface.
+ * Note: future work could replace PowerShell with a pure-JS zip lib (yauzl/adm-zip)
+ * to eliminate shell dependency entirely.
+ */
+function validatePath(p) {
+  if (!p || typeof p !== 'string') {
+    throw new Error('Invalid path');
+  }
+  if (!path.isAbsolute(p)) {
+    throw new Error(`Path must be absolute: ${p}`);
+  }
+  const resolved = path.resolve(p);
+  if (resolved.includes('..')) {
+    throw new Error(`Path must not contain traversal: ${p}`);
+  }
+  return resolved;
+}
+
 const BACKUP_META_FILE = '__backup_meta__.json';
 
 /**
@@ -112,6 +161,7 @@ function cleanupOldBackups(installDir, keep = 3) {
  */
 function listZipEntries(zipPath) {
   return new Promise((resolve, reject) => {
+    zipPath = validatePath(zipPath);
     const ps = spawn('powershell', [
       '-NoProfile', '-NonInteractive', '-Command',
       `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::OpenRead('${zipPath.replace(/'/g, "''")}').Entries | ForEach-Object { $_.FullName }`
@@ -148,6 +198,8 @@ function listZipEntries(zipPath) {
  */
 function extractZip(zipPath, destDir) {
   return new Promise((resolve, reject) => {
+    zipPath = validatePath(zipPath);
+    destDir = validatePath(destDir);
     if (!fs.existsSync(destDir)) {
       fs.mkdirSync(destDir, { recursive: true });
     }
@@ -175,16 +227,22 @@ function extractZip(zipPath, destDir) {
 /**
  * Combine multiple files into one file.
  */
-function combineFiles(inputPaths, outputPath) {
+async function combineFiles(inputPaths, outputPath) {
   const out = fs.createWriteStream(outputPath);
   for (const p of inputPaths) {
-    const data = fs.readFileSync(p);
-    out.write(data);
+    // 流式拼接，避免大文件整读进内存导致 OOM
+    await new Promise((resolve, reject) => {
+      const src = fs.createReadStream(p);
+      src.on('error', reject);
+      out.on('error', reject);
+      src.on('end', resolve);
+      src.pipe(out, { end: false });
+    });
   }
-  out.end();
-  return new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     out.on('finish', resolve);
     out.on('error', reject);
+    out.end();
   });
 }
 
@@ -193,7 +251,7 @@ function combineFiles(inputPaths, outputPath) {
  */
 function backupFiles(installDir, relativePaths, backupDir) {
   for (const relPath of relativePaths) {
-    const src = path.join(installDir, relPath);
+    const src = safeResolve(installDir, relPath);
     const dest = path.join(backupDir, relPath);
     if (fs.existsSync(src)) {
       ensureParent(dest);
@@ -216,7 +274,7 @@ function restoreFiles(backupDir, installDir) {
   const entries = fs.readdirSync(backupDir, { withFileTypes: true });
   for (const entry of entries) {
     const src = path.join(backupDir, entry.name);
-    const dest = path.join(installDir, entry.name);
+    const dest = safeResolve(installDir, entry.name);
 
     if (entry.isDirectory()) {
       if (fs.existsSync(dest)) removeDir(dest);
@@ -233,7 +291,7 @@ function restoreFiles(backupDir, installDir) {
  */
 function deleteFiles(installDir, relativePaths) {
   for (const relPath of relativePaths) {
-    const full = path.join(installDir, relPath);
+    const full = safeResolve(installDir, relPath);
     if (fs.existsSync(full)) {
       const stat = fs.statSync(full);
       if (stat.isDirectory()) {
@@ -327,18 +385,22 @@ async function installSingleFile(taskFile, installDir, backupDir, allBackupPaths
       }
     }
 
-    const entries = await listZipEntries(taskFile.fullPath);
-    const relativePaths = entries.map(e => e.fullName).filter(p => !p.endsWith('/'));
+  const entries = await listZipEntries(taskFile.fullPath);
+  const relativePaths = entries.map(e => e.fullName).filter(p => !p.endsWith('/'));
 
-    for (const relPath of relativePaths) {
-      if (!allBackupPaths.has(relPath)) {
-        allBackupPaths.add(relPath);
-      }
+  if (!allSafe(installDir, relativePaths)) {
+    throw new Error('Update package contains unsafe paths (Zip Slip detected)');
+  }
+
+  for (const relPath of relativePaths) {
+    if (!allBackupPaths.has(relPath)) {
+      allBackupPaths.add(relPath);
     }
-    backupFiles(installDir, relativePaths, backupDir);
+  }
+  backupFiles(installDir, relativePaths, backupDir);
 
-    await extractZip(taskFile.fullPath, installDir);
-    return;
+  await extractZip(taskFile.fullPath, installDir);
+  return;
   }
 
   // Plain file: copy to install dir with the same basename
@@ -378,6 +440,10 @@ async function installCompressedPackage(taskFile, installDir, backupDir, allBack
 
   const entries = await listZipEntries(zipPath);
   const relativePaths = entries.map(e => e.fullName).filter(p => !p.endsWith('/'));
+
+  if (!allSafe(installDir, relativePaths)) {
+    throw new Error('Update package contains unsafe paths (Zip Slip detected)');
+  }
 
   for (const relPath of relativePaths) {
     if (!allBackupPaths.has(relPath)) {

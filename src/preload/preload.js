@@ -37,12 +37,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 在资源管理器中打开路径
   openPath: (targetPath) => ipcRenderer.invoke('open-path', targetPath),
 
-  // 事件监听
+  // 事件监听（均返回 unsubscribe 函数，避免重复注册导致监听器累积）
   onGameExited: (callback) => {
-    ipcRenderer.on('game-exited', (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('game-exited', listener);
+    return () => ipcRenderer.removeListener('game-exited', listener);
   },
   onGameRunning: (callback) => {
-    ipcRenderer.on('game-running', (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('game-running', listener);
+    return () => ipcRenderer.removeListener('game-running', listener);
   },
 
   // === Update system ===
@@ -55,15 +59,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // === Update events ===
   onUpdateStatusChange: (callback) => {
-    ipcRenderer.on('update-status-change', (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('update-status-change', listener);
+    return () => ipcRenderer.removeListener('update-status-change', listener);
   },
   onDownloadProgress: (callback) => {
-    ipcRenderer.on('download-progress', (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('download-progress', listener);
+    return () => ipcRenderer.removeListener('download-progress', listener);
   },
   onUpdateError: (callback) => {
-    ipcRenderer.on('update-error', (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('update-error', listener);
+    return () => ipcRenderer.removeListener('update-error', listener);
   },
   onPreDownloadReady: (callback) => {
-    ipcRenderer.on('predownload-ready', (_event, data) => callback(data));
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('predownload-ready', listener);
+    return () => ipcRenderer.removeListener('predownload-ready', listener);
   }
 });
