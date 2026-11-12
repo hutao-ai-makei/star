@@ -23,15 +23,6 @@ function renderLibrary(containerEl, games, selectedId, onSelect) {
       el.textContent = '🎮';
     }
 
-    // 更新中（下载/暂停/解压/校验等）显示角标
-    const updating = ['downloading', 'pending', 'decompressing', 'merging', 'verifying', 'paused'].includes(game.updateStatus);
-    if (updating) {
-      const dot = document.createElement('span');
-      dot.className = 'badge-dot';
-      dot.title = '有更新可用';
-      el.appendChild(dot);
-    }
-
     el.addEventListener('click', () => onSelect(game.id));
     containerEl.appendChild(el);
   });

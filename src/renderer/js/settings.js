@@ -13,7 +13,7 @@ const SIDEBAR_MIN = 140;
 const SIDEBAR_MAX = 320;
 
 // === DOM 缓存 ===
-let panelEl, overlayEl, closeBtnEl, gameListPanelEl, downloadPanelEl;
+let panelEl, overlayEl, closeBtnEl, gameListPanelEl;
 let sidebarEl, resizerEl, contentEl;
 
 /**
@@ -50,7 +50,7 @@ function closeSettingsPanel() {
 function loadSettingsState() {
   try {
     const saved = JSON.parse(localStorage.getItem('star-settings-state') || '{}');
-    if (saved.category === 'games' || saved.category === 'download') {
+    if (saved.category === 'games') {
       currentCategory = saved.category;
     }
     if (typeof saved.sidebarWidth === 'number') {
@@ -88,64 +88,9 @@ function switchCategory(category) {
   renderSidebar();
 
   if (gameListPanelEl) gameListPanelEl.style.display = category === 'games' ? '' : 'none';
-  if (downloadPanelEl) downloadPanelEl.style.display = category === 'download' ? '' : 'none';
 
   if (category === 'games') {
     renderSettingsGames();
-  } else if (category === 'download') {
-    renderDownloadSettings();
-  }
-}
-
-async function renderDownloadSettings() {
-  if (!downloadPanelEl) return;
-  const settings = await window.electronAPI.getSettings();
-
-  downloadPanelEl.innerHTML = `
-    <div class="settings-download-section">
-      <div class="settings-section-title">📥 下载管理</div>
-      <div class="settings-field">
-        <label>并发下载数</label>
-        <input type="number" id="setting-max-concurrent" value="${Number(settings.maxConcurrentDownloads ?? settings.maxConcurrentChunks ?? 4)}" min="1" max="16" class="settings-input">
-      </div>
-      <div class="settings-field">
-        <label>下载失败重试次数</label>
-        <input type="number" id="setting-max-retries" value="${Number(settings.maxDownloadRetries ?? 3)}" min="0" max="10" class="settings-input">
-      </div>
-      <div class="settings-field">
-        <label>下载限速（KB/s，0 表示不限速）</label>
-        <input type="number" id="setting-speed-limit" value="${Math.round((settings.downloadSpeedLimit || 0) / 1024)}" min="0" class="settings-input">
-      </div>
-      <div class="settings-edit-actions">
-        <button class="settings-save-btn" id="settings-save-download">保存下载设置</button>
-      </div>
-    </div>
-  `;
-
-  const btn = document.getElementById('settings-save-download');
-  if (btn) btn.addEventListener('click', saveDownloadSettings);
-}
-
-async function saveDownloadSettings() {
-  const concurrentEl = document.getElementById('setting-max-concurrent');
-  const retriesEl = document.getElementById('setting-max-retries');
-  const speedEl = document.getElementById('setting-speed-limit');
-
-  const updates = {};
-  if (concurrentEl) updates.maxConcurrentDownloads = Math.max(1, Math.min(16, Number(concurrentEl.value) || 4));
-  if (retriesEl) updates.maxDownloadRetries = Math.max(0, Math.min(10, Number(retriesEl.value) || 3));
-  if (speedEl) {
-    const kbps = Math.max(0, Number(speedEl.value) || 0);
-    updates.downloadSpeedLimit = kbps * 1024;
-  }
-
-  await window.electronAPI.updateSettings(updates);
-
-  const btn = document.getElementById('settings-save-download');
-  if (btn) {
-    const original = btn.textContent;
-    btn.textContent = '✓ 已保存';
-    setTimeout(() => { btn.textContent = original; }, 1500);
   }
 }
 
@@ -182,7 +127,6 @@ function ensurePanelDOM() {
   overlayEl = document.getElementById('settings-overlay');
   closeBtnEl = document.getElementById('settings-close-btn');
   gameListPanelEl = document.getElementById('settings-game-list');
-  downloadPanelEl = document.getElementById('settings-download');
   sidebarEl = document.getElementById('settings-sidebar');
   resizerEl = document.getElementById('settings-resizer');
   contentEl = document.getElementById('settings-content');

@@ -37,7 +37,6 @@
   background: var(--success);
   box-shadow: 0 0 6px var(--success);
 }
-.status-chip.updating .led { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
 
 #game-name {
   font-size: 42px;

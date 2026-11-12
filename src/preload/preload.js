@@ -47,35 +47,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const listener = (_event, data) => callback(data);
     ipcRenderer.on('game-running', listener);
     return () => ipcRenderer.removeListener('game-running', listener);
-  },
-
-  // === Update system ===
-  checkUpdate: (gameId) => ipcRenderer.invoke('check-update', gameId),
-  startDownload: (gameId, mode) => ipcRenderer.invoke('start-download', gameId, mode),
-  pauseDownload: (gameId) => ipcRenderer.invoke('pause-download', gameId),
-  cancelDownload: (gameId) => ipcRenderer.invoke('cancel-download', gameId),
-  startInstall: (gameId) => ipcRenderer.invoke('start-install', gameId),
-  rollbackGame: (gameId) => ipcRenderer.invoke('rollback-game', gameId),
-
-  // === Update events ===
-  onUpdateStatusChange: (callback) => {
-    const listener = (_event, data) => callback(data);
-    ipcRenderer.on('update-status-change', listener);
-    return () => ipcRenderer.removeListener('update-status-change', listener);
-  },
-  onDownloadProgress: (callback) => {
-    const listener = (_event, data) => callback(data);
-    ipcRenderer.on('download-progress', listener);
-    return () => ipcRenderer.removeListener('download-progress', listener);
-  },
-  onUpdateError: (callback) => {
-    const listener = (_event, data) => callback(data);
-    ipcRenderer.on('update-error', listener);
-    return () => ipcRenderer.removeListener('update-error', listener);
-  },
-  onPreDownloadReady: (callback) => {
-    const listener = (_event, data) => callback(data);
-    ipcRenderer.on('predownload-ready', listener);
-    return () => ipcRenderer.removeListener('predownload-ready', listener);
   }
 });

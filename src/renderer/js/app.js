@@ -7,7 +7,6 @@ const gameListEl = document.getElementById('game-list');
 const gameNameEl = document.getElementById('game-name');
 const metaLastEl = document.getElementById('meta-last');
 const metaHoursEl = document.getElementById('meta-hours');
-const versionChipEl = document.getElementById('version-chip');
 const statusTextEl = document.getElementById('status-text');
 const launchBtn = document.getElementById('launch-btn');
 const launchIcon = document.getElementById('launch-icon');
@@ -24,7 +23,6 @@ async function init() {
   bindLaunchButton();
   bindAddButton();
   bindGameEvents();
-  UpdatePanel.init();
   bindActionButtons();
 }
 
@@ -39,13 +37,11 @@ function renderAll() {
     gameNameEl.textContent = '';
     metaLastEl.textContent = '从未游玩';
     metaHoursEl.textContent = '尚未游玩';
-    versionChipEl.textContent = '';
     statusTextEl.textContent = '未安装';
     coverArea.style.backgroundImage = '';
     coverArea.style.background = 'linear-gradient(135deg, #2D1B69 0%, #1a3a5c 40%, #0d2137 100%)';
     launchBtn.style.display = 'none';
     emptyStateEl.style.display = '';
-    UpdatePanel.hide();
     return;
   }
 
@@ -58,19 +54,6 @@ function renderAll() {
 
   renderLibrary(gameListEl, games, selectedGameId, onGameSelect);
   renderDetail(games.find(g => g.id === selectedGameId));
-
-  window._currentGame = games.find(g => g.id === selectedGameId);
-
-  const selGame = games.find(g => g.id === selectedGameId);
-  if (selGame) {
-    if (selGame.updateStatus === 'downloading') {
-      UpdatePanel.show('downloading', { gameId: selGame.id, ...selGame.downloadProgress });
-    } else if (selGame.updateStatus === 'error') {
-      UpdatePanel.show('error', { gameId: selGame.id, error: '上次更新失败，请重试' });
-    } else if (selGame.updateStatus === 'done') {
-      UpdatePanel.show('done', { gameId: selGame.id, version: selGame.targetVersion, isPreDownload: selGame.isPreDownload });
-    }
-  }
 }
 
 function onGameSelect(id) {
@@ -100,30 +83,8 @@ function bindKeyboard() {
 }
 
 function bindLaunchButton() {
-  launchBtn.addEventListener('click', async () => {
-    if (!selectedGameId) return;
-    const game = games.find(g => g.id === selectedGameId);
-    window._currentGame = game;
-
-    if (game.packageId) {
-      try {
-        const check = await window.electronAPI.checkUpdate(selectedGameId);
-        if (check.hasUpdate) {
-          UpdatePanel.show(check.forceUpdate ? 'force' : 'available', {
-            gameId: selectedGameId,
-            manifest: check.manifest,
-            forceUpdate: check.forceUpdate,
-          });
-
-          window._pendingLaunch = () => doLaunch(selectedGameId);
-          return;
-        }
-      } catch (err) {
-        console.error('Update check failed:', err);
-      }
-    }
-
-    doLaunch(selectedGameId);
+  launchBtn.addEventListener('click', () => {
+    if (selectedGameId) doLaunch(selectedGameId);
   });
 }
 
@@ -153,12 +114,11 @@ function bindActionButtons() {
 }
 
 /**
- * Actually launch the game (update check already done).
+ * 启动游戏
  */
 async function doLaunch(gameId) {
   const result = await window.electronAPI.launchGame(gameId);
   if (!result.success) {
-    if (result.needsUpdate) return;
     alert('启动失败：' + (result.error || '未知错误'));
   }
 }
@@ -177,13 +137,13 @@ function bindAddButton() {
 }
 
 function bindGameEvents() {
-  window.electronAPI.onGameRunning(({ id }) => {
+  window.electronAPI.onGameRunning(() => {
     launchIcon.textContent = '■';
     launchText.textContent = '停止';
     launchBtn.classList.add('running');
   });
 
-  window.electronAPI.onGameExited(async ({ id }) => {
+  window.electronAPI.onGameExited(async () => {
     launchIcon.textContent = '▶';
     launchText.textContent = '启动游戏';
     launchBtn.classList.remove('running');

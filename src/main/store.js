@@ -35,14 +35,6 @@ function readData() {
         windowY: null,
         scanDirs: [],
         autoScan: false,
-        // === Update system settings ===
-        defaultApiBase: '',
-        autoCheckUpdate: true,
-        preDownloadPollMinutes: 30,
-        maxConcurrentChunks: 4,           // 兼容旧配置
-        maxConcurrentDownloads: 4,
-        maxDownloadRetries: 3,
-        downloadSpeedLimit: 0,            // 0 表示不限速，单位 bytes/s
       }
     };
     fs.writeFileSync(LIBRARY_FILE, JSON.stringify(defaults, null, 2), 'utf-8');
@@ -119,24 +111,7 @@ function addGame({ name, exePath, coverPath }) {
     sortOrder: data.games.length,
     notes: '',
     rating: 0,
-    // === Update system fields ===
-    packageId: '',
-    apiBase: '',
-    currentVersion: '',
-    targetVersion: '',
-    ignoreVersion: '',
-    updateStatus: 'idle',
-    updateMode: 'full',
-    downloadProgress: {
-      totalBytes: 0,
-      downloadedBytes: 0,
-      speed: 0,
-      chunks: []
-    },
-    updateLog: '',
     installDir: inferInstallDir(exePath),
-    isPreDownload: false,
-    predownloadInfo: null,            // { localVersion, predownloadVersion, audioLanguage }
   };
   data.games.push(newGame);
   writeData(data);

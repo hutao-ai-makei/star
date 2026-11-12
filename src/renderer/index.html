@@ -44,7 +44,6 @@
         <div id="hero-info">
           <div id="game-status-row">
             <span class="status-chip" id="status-chip"><span class="led"></span><span id="status-text">已安装</span></span>
-            <span class="status-chip" id="version-chip">v0.0</span>
           </div>
           <h1 id="game-name"></h1>
           <div id="game-name-en"></div>
@@ -67,13 +66,6 @@
           <button id="launch-btn"><span id="launch-icon">▶</span><span id="launch-text">启动游戏</span></button>
         </div>
 
-        <!-- 更新面板（浮层卡片，由 update-panel.js 控制） -->
-        <div id="update-panel">
-          <div id="update-title"></div>
-          <div id="update-body"></div>
-          <div id="update-actions"></div>
-        </div>
-
         <div id="empty-state">
           <div style="font-size:48px;margin-bottom:12px;">🎮</div>
           <div>还没有游戏</div>
@@ -91,12 +83,10 @@
         <div id="settings-body">
           <div id="settings-sidebar">
             <div class="settings-category active" data-category="games">🎮 游戏管理</div>
-            <div class="settings-category" data-category="download">📥 下载管理</div>
           </div>
           <div id="settings-resizer" title="拖拽调整宽度"></div>
           <div id="settings-content">
             <div id="settings-game-list"></div>
-            <div id="settings-download" style="display:none;"></div>
           </div>
         </div>
       </div>
@@ -108,7 +98,6 @@
   <script src="js/detail.js"></script>
   <script src="js/add-game.js"></script>
   <script src="js/settings.js"></script>
-  <script src="js/update-panel.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

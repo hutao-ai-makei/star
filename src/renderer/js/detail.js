@@ -7,7 +7,6 @@ async function renderDetail(game) {
   const enEl = document.getElementById('game-name-en');
   const lastEl = document.getElementById('meta-last');
   const hoursEl = document.getElementById('meta-hours');
-  const verEl = document.getElementById('version-chip');
   const chip = document.getElementById('status-chip');
   const chipText = document.getElementById('status-text');
 
@@ -16,9 +15,7 @@ async function renderDetail(game) {
     enEl.textContent = '';
     lastEl.textContent = '从未游玩';
     hoursEl.textContent = '尚未游玩';
-    verEl.textContent = '';
     chipText.textContent = '未安装';
-    chip.classList.remove('updating');
     await setBackground(null);
     return;
   }
@@ -27,11 +24,7 @@ async function renderDetail(game) {
   enEl.textContent = game.enName || '';   // 数据中暂无英文名，留空则自动隐藏
   lastEl.textContent = formatLastPlayed(game.lastPlayedAt);
   hoursEl.textContent = formatPlayTime(game.totalPlayTime) || '尚未游玩';
-  verEl.textContent = game.currentVersion || '';
-
-  const updating = ['downloading', 'pending', 'decompressing', 'merging', 'verifying', 'paused'].includes(game.updateStatus);
-  chip.classList.toggle('updating', updating);
-  chipText.textContent = updating ? '更新中' : '已安装';
+  chipText.textContent = '已安装';
 
   // 右侧主背景：mediaDir > videoPath > backgroundPath > 默认渐变
   await setBackground(game);
